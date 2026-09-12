@@ -1,110 +1,79 @@
 # PJ001 Development Plan
 
-Version: 1.0  
-Status: M2 combat depth in implementation — M2.1 active  
+Version: 1.1  
+Status: M2 combat depth in implementation — M2.2 active  
 Source of truth: this repository
 
-## 1. Problem and outcome
-PJ001 is one concrete mobile-first 2D top-down action RPG prototype.
+## 1. Product goal
+PJ001 is one concrete mobile-first 2D top-down action RPG prototype. The first objective is to validate whether combat is responsive, readable, and enjoyable enough on a phone to justify producing more content.
 
-The first objective is to validate whether the core combat feels fun on a phone before investing in content, art, economy, story, backend, monetization, or release engineering.
-
-Primary success question:
-
-> Is the combat responsive, readable, and enjoyable enough that the player wants to keep fighting and progressing?
-
-Primary stakeholder: project owner/player-tester.  
-Implementation role: AI-led development, with the project owner making product/design decisions.
+Core loop: explore -> fight -> loot -> upgrade -> explore further.
 
 ## 2. Locked product decisions
 - Genre: RPG
 - Combat: real-time action, Zelda-like
 - Camera: 2D top-down
 - Player: one controllable character
-- Core loop: explore -> fight -> loot -> upgrade -> explore further
-- Primary target: Android
-- Development/testing: web-first through a stable Chrome playtest URL; Android packaging later
+- Target: Android, web-first playtest
 - Orientation: portrait
-- Reference design space: 720 x 1280 only as a design reference, not a fixed runtime aspect ratio
-- Runtime display: responsive to the actual mobile browser viewport
-- Gameplay fills the viewport; touch controls overlay the lower gameplay area
-- Controls: virtual joystick lower-left; attack/dodge/skills lower-right
-- Basic attack: manual tap, follows current facing direction
-- Dodge: directional dash from movement intent with short invulnerability window
-- Enemy contact alone does not damage the player; damage must come from explicit enemy attacks
-- Hit feedback: intentionally arcade-heavy
-- Aim assist: soft correction only, no hard lock-on
-- Skills: larger pool with limited equipped set; prototype target 3 active skills
-- Progression: level/stat growth + equipment loot
+- Runtime: responsive to actual mobile browser viewport
+- Controls: joystick lower-left; attack/dodge/skills lower-right
+- Basic attack: manual tap from facing
+- Dodge: directional dash with short i-frame window
+- Enemy body contact alone does not damage player
+- Hit feedback: arcade-heavy
+- Aim assist: soft correction only, no hard lock
 - Death: checkpoint respawn
-- Source of truth: GitHub
 - Stack: Phaser 3 + TypeScript + Vite
+- GitHub and this PLAN are the dynamic source of truth
 
 ## 3. Prototype scope
-Target playtime: approximately 10-20 minutes.
+Target session: 10–20 minutes.
 
-Prototype target: 1 player, 1 small map, 3 enemy types, 1 boss, 3-5 skills, limited equipment/items, simple progression, checkpoint respawn.
+Prototype target: 1 player, 1 small map, 3 enemy types, 1 boss, 3–5 skills, limited equipment/items, simple progression, checkpoint respawn.
 
-The prototype is not content-complete. Its job is to test combat feel and the minimum progression loop.
+## 4. Accepted M1 baseline
+M1 combat sandbox is complete and device-accepted.
 
-## 4. Current state
-Completed:
-- M0 technical bootstrap
-- M0.5 continuous GitHub Pages deployment
-- M0.6 portrait direction test
-- M0.7 responsive portrait shell, device-accepted
-- M1.1 facing + timed melee attack
-- M1.2 first enemy + HP + damage + tuned knockback
-- M1.3 enemy telegraph + explicit enemy attack + player HP/damage, device-tested OK
-- M1.4 dodge dash + i-frames + cooldown/state gating, device-tested and tuned
-- M1.5 soft aim assistance, device-tested OK
-- M1.6 death/respawn + HUD + clean combat-state reset, device-accepted
-- M1 combat sandbox sanity gate accepted by project owner
-
-Accepted M1 tuning baseline:
+Accepted tuning baseline:
 - player move speed: 195
 - enemy knockback speed: 255
 - dodge speed: 450
-- dodge duration / i-frame window: 150 ms
+- dodge duration / i-frame: 150 ms
 - dodge cooldown: 650 ms
 - soft aim range: 155 px
 - soft aim forward cone: 28 degrees
 - soft aim correction cap: 14 degrees
 - soft aim correction strength: 0.6
-- respawn delay: about 1.2 seconds
+- respawn delay: ~1.2 s
 
 Stable playtest URL:
 `https://momentum448-glitch.github.io/PJ001/`
 
+## 5. Locked M2 decisions
+1. Enemy archetypes: existing melee + **Ranged shooter + Charger**.
+2. Three active skills: **Cleave + Projectile + Guard/Parry**.
+3. Skill resource model: **cooldown-only**.
+4. Skill aiming/input: **tap -> cast from facing with soft aim**.
+5. First mixed encounter: **1 melee + 1 ranged**.
+
+Assistant may choose initial HP, damage, speeds, cooldowns, telegraph timings, placeholder visuals, and implementation architecture, then tune from device feedback.
+
+## 6. Current state
+Completed:
+- M0 bootstrap and GitHub Pages deployment
+- M0.7 responsive portrait shell
+- M1.1–M1.6 combat sandbox
+- M2.1 ranged enemy + first mixed encounter, device-accepted
+
 Current implementation target:
-**M2.1 — ranged enemy + first two-enemy encounter.**
+**M2.2 — Charger enemy.**
 
 M2 validation question:
-> Does adding distinct enemy roles and a small skill loadout create meaningful combat choices without making portrait touch controls cluttered or reducing readability?
+> Do distinct enemy roles plus a small skill loadout create meaningful combat choices without making portrait touch controls cluttered or reducing readability?
 
-M2.1 validation question:
-> Can the player read and evade one melee telegraph plus one ranged projectile threat at the same time without the portrait screen becoming visually noisy or unfair?
-
-## 5. Locked M2 foundational decisions
-1. Enemy archetypes #2 and #3: **Ranged shooter + Charger**.
-2. Three active prototype skills: **Cleave + Projectile + Guard/Parry**.
-3. Skill resource model: **cooldown-only**; no mana/energy layer in the prototype.
-4. Skill aiming/input: **tap skill -> cast from facing with soft aim**; no drag aim or hard auto-target.
-5. First multi-enemy encounter: **1 melee + 1 ranged**.
-
-Assistant may choose initial HP, damage, projectile speed, cooldowns, telegraph timings, placeholder visuals, and implementation architecture, then tune from device feedback.
-
-## 6. Working assumptions
-- Single-player, offline-first, melee-first combat
-- No multiplayer/backend/account/monetization during prototype
-- No crafting, elemental system, stamina, or complex combo tree initially
-- Equipment initially weapon + armor only
-- Placeholder visuals are acceptable until combat is validated
-- Portrait encounter composition should avoid very wide horizontal sightlines
-- Browser viewport resize must remain safe
-- M1 tuning is the baseline; future changes require a specific M2 reason or device feedback
-- M2 should add depth through role interaction, not raw content volume
-- Ranged projectiles use explicit readable wind-up and do not deal passive contact damage before being fired
+M2.2 validation question:
+> Can a committed charger attack remain readable and fair while melee and ranged threats already exist on screen?
 
 ## 7. Development principles
 1. Validate feel before content volume.
@@ -115,104 +84,85 @@ Assistant may choose initial HP, damage, projectile speed, cooldowns, telegraph 
 6. Every milestone needs observable acceptance criteria.
 7. Update this plan before meaningful gameplay implementation.
 8. Use branches and pull requests; `main` remains reviewed source of truth.
-9. Before important work, re-read PLAN and inspect current GitHub state rather than relying on chat memory.
+9. Before important work, re-read PLAN and inspect current GitHub state.
 10. Keep the public playtest URL usable after meaningful merges.
 
 ## 8. Milestones
 ### M0 — Technical bootstrap
 Status: Complete
 
-### M0.5 — Continuous browser playtest deployment
-Status: Complete
-
-### M0.6 — Portrait mobile shell
-Status: Complete
-
-### M0.7 — Responsive portrait shell
-Status: Complete
-
 ### M1 — Combat sandbox
 Status: Complete, device-accepted
-
-Validated baseline:
-- move, attack, dodge, take damage, kill, die, respawn
-- touch controls usable in portrait
-- readable attack and enemy telegraph timing
-- no passive contact damage
-- directional dodge with i-frames and cooldown
-- soft aim reduces near-misses without lock-on
-- strong hit feedback
-- clean reset after death/respawn
 
 ### M2 — Combat depth
 Status: In progress
 
 Scope:
-- 3 enemy archetypes total: melee, ranged, charger
-- 3 active prototype skills: Cleave, Projectile, Guard/Parry
-- cooldown-only skill model
+- melee, ranged, charger archetypes
+- Cleave, Projectile, Guard/Parry
+- cooldown-only skills
 - facing + soft-aim skill casting
 - role-specific telegraphs
-- multi-enemy encounter composition
+- portrait multi-enemy encounter composition
 
 ### M3 — Reward and progression loop
 Status: Planned
 
-Scope: XP/levels, basic stats, weapon + armor, loot, simple inventory/equipment UI, checkpoint progression.
+XP/levels, basic stats, weapon + armor, loot, simple inventory/equipment UI, checkpoint progression.
 
 ### M4 — Prototype map and boss
 Status: Planned
 
-Scope: one portrait-oriented map, encounter flow, checkpoint, one boss, 10-20 minute prototype session.
+One portrait-oriented map, encounter flow, checkpoint, one boss, 10–20 minute prototype session.
 
 ### M5 — Mobile prototype validation
 Status: Planned
 
-Output: go / revise / stop based on combat fun, ergonomics, readability, pacing, progression motivation, and phone performance.
+Go / revise / stop decision based on combat fun, ergonomics, readability, pacing, progression motivation, and phone performance.
 
-## 9. Explicitly out of scope until prototype validation
-Story campaign, large world, multiplayer, online services, accounts/cloud saves, monetization, extensive crafting, large item/skill databases, production art pipeline, localization, Play Store release work, and early APK packaging.
-
-## 10. Workflow for every milestone
-Before implementation: re-read plan/repo, define validation question, identify material decisions, record assumptions/acceptance criteria, and choose the smallest testable slice.
-
-During implementation: create milestone branch, keep commits focused, run build/CI, avoid unrelated refactors.
-
-Before merge: verify machine-testable criteria, record device-test items, review PR, merge only when coherent.
-
-After device testing: record findings, tune/lock decisions, update plan, then continue.
-
-## 11. M2 implementation breakdown
+## 9. M2 implementation breakdown
 ### M2.1 — Ranged enemy and first mixed encounter
+Status: Complete, device-accepted
+
+Implemented:
+- 1 melee + 1 ranged encounter
+- ~700 ms ranged pre-fire telegraph
+- ~220 px/s projectile
+- projectile respects dodge i-frames
+- basic attack damages/kills ranged enemy
+- soft aim considers multiple valid targets
+- respawn clears projectiles and resets both enemies
+
+### M2.2 — Charger enemy
 Status: In implementation
 
 Scope:
-- add one ranged enemy alongside the existing melee enemy
-- ranged enemy has readable pre-fire telegraph
-- fired projectile travels through the arena and damages player only on explicit projectile hit
-- dodge i-frames work against projectile hits
-- melee attack can damage/kill the ranged enemy
-- soft aim chooses a valid nearby enemy without persistent lock-on
-- death/respawn resets both enemies and all ranged projectile state
+- add third archetype: charger
+- charger uses a clear wind-up before movement
+- charge direction is committed when the attack begins; no homing during the dash
+- damage is active only during the charge, not from passive body contact
+- dodge i-frames avoid charge damage
+- basic attack can damage/kill charger
+- soft aim can consider charger together with melee/ranged
+- death/respawn resets charger attack state cleanly
 
 Initial tunable values:
-- ranged HP: 2
-- pre-fire wind-up: ~700 ms
-- projectile speed: ~220 px/s
-- ranged attack cooldown: ~1400 ms
-- preferred spawn: upper-right while melee remains upper-center/left
+- charger HP: 3
+- wind-up: ~650 ms
+- charge speed: ~360 px/s
+- charge active duration: ~420 ms
+- recovery: ~650 ms
+- cooldown before next wind-up: ~900 ms
+- preferred spawn: upper-left, visually separated from ranged upper-right
 
 Done when:
-- player can distinguish melee telegraph from ranged pre-fire telegraph
-- projectile is readable on a phone and can be dodged intentionally
-- projectile cannot cause repeated/stale damage after death/respawn
-- both enemies can be killed with the current basic attack
-- encounter remains understandable in portrait orientation
-
-### M2.2 — Charger enemy
-Status: Planned
-
-Add a third archetype with clear charge wind-up, committed movement line, active damage window, and recovery.
+- player can tell the charger telegraph apart from melee and ranged telegraphs
+- charger locks its direction before movement and does not steer toward the player mid-charge
+- touching an idle/recovering charger causes no damage
+- charge can be intentionally dodged with movement or i-frames
+- only one damage event can occur per charge
+- death/respawn leaves no stale charger damage state
+- three archetypes remain understandable in portrait orientation
 
 ### M2.3 — Cleave skill
 Status: Planned
@@ -227,22 +177,23 @@ Player ranged skill with cooldown-only cast, facing + soft aim, readable project
 ### M2.5 — Guard/Parry skill
 Status: Planned
 
-Short defensive timing tool; exact guard/parry reward timing will be tested without adding mana/energy.
+Short defensive timing tool; reward timing will be tested without adding mana/energy.
 
 ### M2.6 — Three-skill control layout and encounter pass
 Status: Planned
 
-Fit ATTACK + DODGE + 3 active skills in portrait, then validate mixed melee/ranged/charger encounter readability and 3-minute stability.
+Fit ATTACK + DODGE + 3 active skills in portrait and validate mixed melee/ranged/charger encounter readability and stability.
 
-## 12. Open risks
-- portrait has less horizontal visibility than landscape
-- future skill buttons can crowd ATTACK/DODGE
-- multiple enemies can reduce telegraph readability quickly
-- soft aim must remain predictable when more than one target exists
-- ranged projectiles can become visual clutter or off-screen unfairness
-- skill aiming can conflict with movement if input design is too complex
+## 10. Working assumptions and risks
+- Single-player, offline-first, melee-first
+- Placeholder visuals remain acceptable until combat is validated
+- Portrait encounter composition should avoid very wide sightlines
+- Browser resize must remain safe
+- M1 tuning remains baseline unless M2 feedback gives a specific reason to change it
+- Multiple simultaneous telegraphs can become visually noisy
+- Future skill buttons can crowd ATTACK/DODGE
 - final performance must be verified on target phone
 - repository is currently Public
 
-## 13. Definition of prototype success
-PJ001 succeeds at prototype stage if, after a 10-20 minute portrait mobile session, combat is responsive, understandable, and enjoyable enough to justify producing more content.
+## 11. Definition of prototype success
+PJ001 succeeds at prototype stage if, after a 10–20 minute portrait mobile session, combat is responsive, understandable, and enjoyable enough to justify producing more content.
