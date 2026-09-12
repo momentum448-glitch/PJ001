@@ -1,7 +1,7 @@
 # PJ001 Development Plan
 
-Version: 0.8  
-Status: M1 combat sandbox in implementation — M1.6 active  
+Version: 0.9  
+Status: M1 complete — M2 decision gate active  
 Source of truth: this repository
 
 ## 1. Problem and outcome
@@ -34,7 +34,7 @@ Implementation role: AI-led development, with the project owner making product/d
 - Enemy contact alone does not damage the player; damage must come from explicit enemy attacks
 - Hit feedback: intentionally arcade-heavy
 - Aim assist: soft correction only, no hard lock-on
-- Skills later: larger pool with limited equipped set; prototype target 3 active skills
+- Skills: larger pool with limited equipped set; prototype target 3 active skills
 - Progression: level/stat growth + equipment loot
 - Death: checkpoint respawn
 - Source of truth: GitHub
@@ -58,8 +58,10 @@ Completed:
 - M1.3 enemy telegraph + explicit enemy attack + player HP/damage, device-tested OK
 - M1.4 dodge dash + i-frames + cooldown/state gating, device-tested and tuned
 - M1.5 soft aim assistance, device-tested OK
+- M1.6 death/respawn + HUD + clean combat-state reset, device-accepted
+- M1 combat sandbox sanity gate accepted by project owner
 
-Current tuned values from device feedback:
+Accepted M1 tuning baseline:
 - player move speed: 195
 - enemy knockback speed: 255
 - dodge speed: 450
@@ -68,15 +70,17 @@ Current tuned values from device feedback:
 - soft aim range: 155 px
 - soft aim forward cone: 28 degrees
 - soft aim correction cap: 14 degrees
+- soft aim correction strength: 0.6
+- respawn delay: about 1.2 seconds
 
 Stable playtest URL:
 `https://momentum448-glitch.github.io/PJ001/`
 
-Current implementation target:
-**M1.6 — death/respawn, HUD cleanup, and final M1 combat sandbox pass.**
+Current product gate:
+**M2 — combat depth decisions before implementation.**
 
-M1.6 validation question:
-> Can the player complete the full combat loop — fight, take damage, die, respawn, and immediately continue — without stale attack/dodge/enemy state or confusing HUD feedback?
+M2 validation question:
+> Does adding distinct enemy roles and a small skill loadout create meaningful combat choices without making portrait touch controls cluttered or reducing readability?
 
 ## 5. Working assumptions
 - Single-player, offline-first, melee-first combat
@@ -86,8 +90,8 @@ M1.6 validation question:
 - Placeholder visuals are acceptable until combat is validated
 - Portrait encounter composition should avoid very wide horizontal sightlines
 - Browser viewport resize must remain safe
-- Combat tuning values remain provisional and can change from device feedback without reopening product decisions
-- M1.6 uses one fixed sandbox checkpoint; map/checkpoint progression comes later
+- M1 tuning is now the baseline; future changes require a specific M2 reason or device feedback
+- M2 should add depth through role interaction, not raw content volume
 
 ## 6. Development principles
 1. Validate feel before content volume.
@@ -115,25 +119,29 @@ Status: Complete
 Status: Complete
 
 ### M1 — Combat sandbox
-Status: In progress
+Status: Complete, device-accepted
 
-Goal: determine whether movement, attack, dodge, and enemy interaction can feel responsive and readable on a phone.
-
-M1 acceptance criteria:
-- player can move, attack, dodge, take damage, kill an enemy, die, and respawn
-- controls are usable with two thumbs in portrait orientation
-- attacks have readable startup/contact/recovery
-- enemy attacks are readable before damage
-- touching an enemy alone causes no damage
-- dash follows movement intent and includes a short invulnerability window
-- soft aim helps near misses without feeling like hard lock
-- successful hits have strong arcade-style feedback
-- no game-breaking input/state bug during a 3-minute continuous fight test
+Validated baseline:
+- move, attack, dodge, take damage, kill, die, respawn
+- touch controls usable in portrait
+- readable attack and enemy telegraph timing
+- no passive contact damage
+- directional dodge with i-frames and cooldown
+- soft aim reduces near-misses without lock-on
+- strong hit feedback
+- clean reset after death/respawn
 
 ### M2 — Combat depth
-Status: Planned
+Status: Decision gate
 
-Scope: 3 enemy archetypes total, 3 active prototype skills, cooldowns, clearer telegraphs, encounter composition.
+Planned scope after decisions are locked:
+- 3 enemy archetypes total
+- 3 active prototype skills
+- skill cooldowns
+- clearer role-specific telegraphs
+- small multi-enemy encounter composition
+
+No M2 gameplay implementation should start until the foundational enemy/skill/control decisions below are locked.
 
 ### M3 — Reward and progression loop
 Status: Planned
@@ -166,82 +174,44 @@ After device testing: record findings, tune/lock decisions, update plan, then co
 ### M1.1 — Facing and attack state
 Status: Complete
 
-Implemented: independent facing, startup/active/recovery, active-only melee hitbox, anti-spam state gating.
-
 ### M1.2 — First enemy and damage model
 Status: Complete, device-tuned
-
-Implemented: enemy HP, melee damage, one hit per attack, knockback, flash/impact/damage number/camera feedback, repeated enemy respawn.
 
 ### M1.3 — Enemy telegraph and player damage
 Status: Complete, device-tested OK
 
-Implemented: enemy windup -> active -> recovery, readable telegraph, explicit active-only hitbox, player HP/hit response, one hit maximum per enemy attack, and no passive contact damage.
-
 ### M1.4 — Dodge dash
 Status: Complete, device-tested and tuned
-
-Locked behavior:
-- dedicated DODGE touch control
-- dash uses current movement input; facing fallback when neutral
-- player invulnerable only during dash
-- explicit cooldown/state gating
-- attack and dodge cannot start on top of each other
-
-Accepted tuned values:
-- player move speed: 195
-- dash speed: 450
-- dash duration / i-frame: 150 ms
-- cooldown: 650 ms
 
 ### M1.5 — Soft aim assistance
 Status: Complete, device-tested OK
 
-Locked behavior:
-- attack begins from manual facing
-- only nearby living enemy in a narrow forward cone is eligible
-- correction is partial/capped and local to the attack
-- no persistent lock-on, camera behavior, or forced facing change
-
-Accepted values:
-- range: 155 px
-- forward cone: 28 degrees
-- correction cap: 14 degrees
-- partial correction strength: 0.6
-
 ### M1.6 — Death, respawn, HUD, sandbox pass
-Status: In implementation
+Status: Complete, device-accepted
 
-Scope:
-- replace reload-to-reset death with automatic checkpoint respawn
-- fixed sandbox checkpoint for this milestone
-- reset HP, attack, dodge, enemy attack, input, and transient combat state on respawn
-- restore enemy to a predictable test position/state
-- make death/respawn status readable on phone
-- keep accepted M1.4/M1.5 tuning unchanged unless device feedback identifies a regression
-- complete a 3-minute continuous combat sanity test on device
+Implemented:
+- automatic fixed-checkpoint respawn
+- full HP restore
+- clean reset of attack, dodge, input, enemy attack/hitbox, and transient combat state
+- enemy reset to predictable fresh-fight state
+- readable death/respawn HUD
 
-Initial behavior:
-- respawn delay: about 1.2 seconds
-- respawn at the sandbox checkpoint with full HP
-- enemy also resets so the next fight starts cleanly
+## 11. M2 decision gate
+The following must be locked before M2 gameplay code begins:
+1. Enemy archetype roles for enemies #2 and #3.
+2. Prototype skill identities for the 3 active skills.
+3. Skill resource model: cooldown-only vs another resource layer.
+4. Skill aiming/input model on portrait touch controls.
+5. First multi-enemy encounter composition target.
 
-Done when:
-- reaching 0 HP no longer requires page reload
-- player returns at checkpoint with full HP after a short readable delay
-- stale attack/dodge/enemy hitboxes cannot damage or lock controls after respawn
-- the sandbox can be fought continuously for 3 minutes without game-breaking state/input bugs
-
-## 11. Tunable M1 parameters — not design-blocking
-Player speed/HP, attack timings/range, enemy HP/attack timings/range, dash speed/duration/i-frame/cooldown, soft aim angle/range/correction cap, respawn delay, hit-stop, shake, knockback.
+Assistant can choose initial numeric tuning, cooldown durations, HP values, exact telegraph milliseconds, placeholder visuals, and implementation architecture after those five decisions are locked.
 
 ## 12. Open risks
 - portrait has less horizontal visibility than landscape
-- browser viewport can change while playing
-- lower controls can compete visually with combat
-- dodge button must fit future skill controls
-- soft aim can become intrusive if range/cone/correction is too generous
-- death/respawn must clear every transient combat state cleanly
+- future skill buttons can crowd ATTACK/DODGE
+- multiple enemies can reduce telegraph readability quickly
+- soft aim must remain predictable when more than one target exists
+- skill aiming can conflict with movement if input design is too complex
 - final performance must be verified on target phone
 - repository is currently Public
 
