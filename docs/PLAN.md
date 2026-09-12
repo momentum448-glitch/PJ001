@@ -1,7 +1,7 @@
 # PJ001 Development Plan
 
-Version: 0.7  
-Status: M1 combat sandbox in implementation — M1.5 active  
+Version: 0.8  
+Status: M1 combat sandbox in implementation — M1.6 active  
 Source of truth: this repository
 
 ## 1. Problem and outcome
@@ -36,7 +36,7 @@ Implementation role: AI-led development, with the project owner making product/d
 - Aim assist: soft correction only, no hard lock-on
 - Skills later: larger pool with limited equipped set; prototype target 3 active skills
 - Progression: level/stat growth + equipment loot
-- Death: checkpoint respawn later in M1.6
+- Death: checkpoint respawn
 - Source of truth: GitHub
 - Stack: Phaser 3 + TypeScript + Vite
 
@@ -57,6 +57,7 @@ Completed:
 - M1.2 first enemy + HP + damage + tuned knockback
 - M1.3 enemy telegraph + explicit enemy attack + player HP/damage, device-tested OK
 - M1.4 dodge dash + i-frames + cooldown/state gating, device-tested and tuned
+- M1.5 soft aim assistance, device-tested OK
 
 Current tuned values from device feedback:
 - player move speed: 195
@@ -64,15 +65,18 @@ Current tuned values from device feedback:
 - dodge speed: 450
 - dodge duration / i-frame window: 150 ms
 - dodge cooldown: 650 ms
+- soft aim range: 155 px
+- soft aim forward cone: 28 degrees
+- soft aim correction cap: 14 degrees
 
 Stable playtest URL:
 `https://momentum448-glitch.github.io/PJ001/`
 
 Current implementation target:
-**M1.5 — soft aim assistance for melee attacks.**
+**M1.6 — death/respawn, HUD cleanup, and final M1 combat sandbox pass.**
 
-M1.5 validation question:
-> Can a small aim correction reduce frustrating near-misses on touch controls without taking attack direction control away from the player?
+M1.6 validation question:
+> Can the player complete the full combat loop — fight, take damage, die, respawn, and immediately continue — without stale attack/dodge/enemy state or confusing HUD feedback?
 
 ## 5. Working assumptions
 - Single-player, offline-first, melee-first combat
@@ -83,6 +87,7 @@ M1.5 validation question:
 - Portrait encounter composition should avoid very wide horizontal sightlines
 - Browser viewport resize must remain safe
 - Combat tuning values remain provisional and can change from device feedback without reopening product decisions
+- M1.6 uses one fixed sandbox checkpoint; map/checkpoint progression comes later
 
 ## 6. Development principles
 1. Validate feel before content volume.
@@ -190,34 +195,45 @@ Accepted tuned values:
 - cooldown: 650 ms
 
 ### M1.5 — Soft aim assistance
-Status: In implementation
+Status: Complete, device-tested OK
 
 Locked behavior:
-- attack still starts from the player's manual facing direction
-- only a nearby living enemy inside a narrow forward cone is eligible
-- correction is partial and capped; attack never fully snaps to a target
-- no persistent target selection, lock-on marker, camera rotation, or automatic player facing change
-- correction is chosen when the attack begins and remains stable for that attack
+- attack begins from manual facing
+- only nearby living enemy in a narrow forward cone is eligible
+- correction is partial/capped and local to the attack
+- no persistent lock-on, camera behavior, or forced facing change
 
-Initial tunable values:
-- eligibility range: ~155 px
-- forward cone: ~28 degrees from facing
-- maximum correction: ~14 degrees
-- correction strength: partial toward target, capped by the maximum correction
-
-Done when:
-- a small near-miss toward a nearby enemy is more likely to connect
-- attacks clearly outside the forward cone do not bend toward the enemy
-- the player still feels responsible for attack direction
-- there is no persistent lock-on behavior
+Accepted values:
+- range: 155 px
+- forward cone: 28 degrees
+- correction cap: 14 degrees
+- partial correction strength: 0.6
 
 ### M1.6 — Death, respawn, HUD, sandbox pass
-Status: Planned
+Status: In implementation
 
-Complete HP/death/checkpoint respawn; tune combat timings; run 3-minute continuous sanity test.
+Scope:
+- replace reload-to-reset death with automatic checkpoint respawn
+- fixed sandbox checkpoint for this milestone
+- reset HP, attack, dodge, enemy attack, input, and transient combat state on respawn
+- restore enemy to a predictable test position/state
+- make death/respawn status readable on phone
+- keep accepted M1.4/M1.5 tuning unchanged unless device feedback identifies a regression
+- complete a 3-minute continuous combat sanity test on device
+
+Initial behavior:
+- respawn delay: about 1.2 seconds
+- respawn at the sandbox checkpoint with full HP
+- enemy also resets so the next fight starts cleanly
+
+Done when:
+- reaching 0 HP no longer requires page reload
+- player returns at checkpoint with full HP after a short readable delay
+- stale attack/dodge/enemy hitboxes cannot damage or lock controls after respawn
+- the sandbox can be fought continuously for 3 minutes without game-breaking state/input bugs
 
 ## 11. Tunable M1 parameters — not design-blocking
-Player speed/HP, attack timings/range, enemy HP/attack timings/range, dash speed/duration/i-frame/cooldown, soft aim angle/range/correction cap, hit-stop, shake, knockback.
+Player speed/HP, attack timings/range, enemy HP/attack timings/range, dash speed/duration/i-frame/cooldown, soft aim angle/range/correction cap, respawn delay, hit-stop, shake, knockback.
 
 ## 12. Open risks
 - portrait has less horizontal visibility than landscape
@@ -225,6 +241,7 @@ Player speed/HP, attack timings/range, enemy HP/attack timings/range, dash speed
 - lower controls can compete visually with combat
 - dodge button must fit future skill controls
 - soft aim can become intrusive if range/cone/correction is too generous
+- death/respawn must clear every transient combat state cleanly
 - final performance must be verified on target phone
 - repository is currently Public
 
