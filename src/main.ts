@@ -5,12 +5,12 @@ import { GameScene } from './scenes/GameScene';
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'app',
-  backgroundColor: '#101820',
-  width: 720,
-  height: 1280,
+  backgroundColor: '#14221c',
+  width: window.innerWidth,
+  height: window.innerHeight,
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.NO_CENTER
   },
   physics: {
     default: 'arcade',
