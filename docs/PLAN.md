@@ -1,49 +1,51 @@
 # PJ001 Development Plan
 
-Version: 0.4  
-Status: Approved for responsive portrait shell before M1  
+Version: 0.5  
+Status: M1 combat sandbox in implementation — M1.3 active  
 Source of truth: this repository
 
 ## 1. Problem and outcome
-PJ001 is one concrete game project, not a reusable engine or framework.
+PJ001 is one concrete mobile-first 2D top-down action RPG prototype.
 
 The first objective is to validate whether the core combat feels fun on a phone before investing in content, art, economy, story, backend, monetization, or release engineering.
 
 Primary success question:
 
-> Is the combat fun enough that the player wants to keep moving, attacking, dodging, looting, and upgrading?
+> Is the combat responsive, readable, and enjoyable enough that the player wants to keep fighting and progressing?
 
 Primary stakeholder: project owner/player-tester.  
 Implementation role: AI-led development, with the project owner making product/design decisions.
 
 ## 2. Locked product decisions
 - Genre: RPG
-- Combat: real-time action
+- Combat: real-time action, Zelda-like
 - Camera: 2D top-down
-- Combat style: Zelda-like
-- Player structure: one controllable character
+- Player: one controllable character
 - Core loop: explore -> fight -> loot -> upgrade -> explore further
 - Primary target: Android
-- Development/testing strategy: web-first, then Android packaging later
-- Early play-test method: open a URL in Chrome on Android
+- Development/testing: web-first through a stable Chrome playtest URL; Android packaging later
 - Orientation: portrait
-- Reference design space: 720 x 1280, not a fixed display aspect ratio
-- Screen behavior: responsive to the real mobile browser viewport and able to use taller phone ratios
-- Screen layout: gameplay fills the viewport; touch controls overlay the lower gameplay area rather than living in a separate hard panel
-- Controls: virtual joystick lower-left; attack/dodge/skill controls lower-right
-- Basic attack: manual tap
-- Skills: larger skill pool later, limited equipped active skills; prototype target is 3 active skills
+- Reference design space: 720 x 1280 only as a design reference, not a fixed runtime aspect ratio
+- Runtime display: responsive to the actual mobile browser viewport
+- Gameplay fills the viewport; touch controls overlay the lower gameplay area
+- Controls: virtual joystick lower-left; attack/dodge/skills lower-right
+- Basic attack: manual tap, follows current facing direction
+- Dodge: directional dash from movement intent with short invulnerability window
+- Enemy contact alone does not damage the player; damage must come from explicit enemy attacks
+- Hit feedback: intentionally arcade-heavy
+- Aim assist: soft correction only, no hard lock-on
+- Skills later: larger pool with limited equipped set; prototype target 3 active skills
 - Progression: level/stat growth + equipment loot
-- Death: respawn at checkpoint
-- Source of truth: GitHub repository
-- Implementation stack: Phaser 3 + TypeScript + Vite
+- Death: checkpoint respawn later in M1.6
+- Source of truth: GitHub
+- Stack: Phaser 3 + TypeScript + Vite
 
 ## 3. Prototype scope
 Target playtime: approximately 10-20 minutes.
 
 Prototype content target:
 - 1 player character
-- 1 small playable map
+- 1 small map
 - 3 enemy types
 - 1 boss
 - 3-5 skills total
@@ -51,362 +53,235 @@ Prototype content target:
 - simple level/stat progression
 - checkpoint respawn
 
-The prototype is not a content-complete game. Its job is to test combat feel and the minimum progression loop.
+The prototype is not content-complete. Its job is to test combat feel and the minimum progression loop.
 
 ## 4. Current state
-M0 technical bootstrap is complete on `main`.
+Completed:
+- M0 technical bootstrap
+- M0.5 GitHub Pages continuous browser playtest deployment
+- M0.6 portrait direction test
+- M0.7 responsive portrait shell, device-accepted as the combat foundation
+- M1.1 facing + timed melee attack with startup/active/recovery and active-only hitbox
+- M1.2 first enemy + enemy HP + real melee damage + knockback + arcade hit feedback
+- M1.2 device tuning: player move speed reduced from 235 to 205; enemy knockback reduced from 360 to 255
 
-M0.5 browser playtest deployment is complete:
-- GitHub Pages deployment via GitHub Actions
-- stable playtest URL: `https://momentum448-glitch.github.io/PJ001/`
-- repository build and deploy workflows run from `main`
+Stable playtest URL:
+`https://momentum448-glitch.github.io/PJ001/`
 
-M0.6 portrait mobile shell is complete and has been device-tested. The portrait direction is accepted, but device feedback showed that a fixed 9:16 canvas leaves unused vertical space on taller phones and that a dedicated lower control panel feels visually separated from the game.
+Current implementation target:
+**M1.3 — enemy telegraph + explicit enemy attack + player HP/damage.**
 
-The next shell refinement therefore keeps portrait but changes the display model: use the actual browser viewport, treat 720 x 1280 only as a reference design space, let the map continue behind the controls, and overlay lighter touch controls near the bottom safe area.
-
-M1 combat implementation should start only after this responsive shell is validated on the target phone.
+M1.3 validation question:
+> Can the player clearly read an enemy attack before damage happens, and can we guarantee that merely touching the enemy never causes damage?
 
 ## 5. Working assumptions
-These are temporary until explicitly changed or validated.
-
 - Single-player
 - Offline-first
-- Melee-first player combat
-- No multiplayer
-- No backend/account system
-- No monetization in prototype
-- No crafting in prototype
-- No elemental interaction system in prototype
-- No complex combo tree in prototype
-- No stamina system initially
-- Equipment slots initially limited to weapon + armor unless testing proves more depth is needed
-- Placeholder/procedural/simple assets are acceptable until combat is validated
+- Melee-first combat
+- No multiplayer/backend/account/monetization during prototype
+- No crafting, elemental system, stamina, or complex combo tree initially
+- Equipment initially weapon + armor only
+- Placeholder/procedural visuals are acceptable until combat is validated
 - Portrait encounter composition should avoid relying on very wide horizontal sightlines
-- Browser chrome and phone aspect ratios vary; gameplay/UI must tolerate dynamic viewport height changes
+- Browser chrome and phone aspect ratios vary; viewport resize must remain safe
+- Combat tuning values remain provisional and should change from device feedback without reopening product decisions
 
 ## 6. Development principles
 1. Validate feel before content volume.
 2. Build the smallest playable experiment for each uncertain mechanic.
-3. Avoid implementing systems that do not affect the current validation question.
-4. Keep mobile touch ergonomics as a first-class requirement.
+3. Avoid systems that do not affect the current validation question.
+4. Treat mobile touch ergonomics as first-class.
 5. Prefer simple, inspectable architecture over premature abstraction.
-6. Every milestone must have observable acceptance criteria.
-7. Plan/document the next milestone before writing gameplay code for it.
-8. Use branches and pull requests for meaningful changes; `main` should remain the reviewed source of truth.
-9. Before important implementation work, re-read this plan and inspect the current GitHub state instead of relying on conversational memory alone.
-10. Keep the public playtest URL usable after meaningful merges so device feedback can happen continuously.
+6. Every milestone needs observable acceptance criteria.
+7. Update this plan before meaningful gameplay implementation.
+8. Use branches and pull requests; `main` remains reviewed source of truth.
+9. Before important work, re-read PLAN and inspect current GitHub state rather than relying on chat memory.
+10. Keep the public playtest URL usable after meaningful merges.
 
 ## 7. Milestones
 
-### M0 - Technical bootstrap
+### M0 — Technical bootstrap
 Status: Complete
 
-Goal: establish a browser-playable mobile-first project skeleton.
-
-Acceptance criteria:
-- project builds
-- game renders
-- player placeholder is visible
-- touch joystick can drive movement
-- attack control responds to touch
-- source is on GitHub
-
-### M0.5 - Continuous browser playtest deployment
+### M0.5 — Continuous browser playtest deployment
 Status: Complete
 
-Goal: make every stable `main` build testable from the Android phone through one URL.
-
-Acceptance criteria:
-- GitHub Pages deploys from GitHub Actions
-- Vite asset paths work under `/PJ001/`
-- build succeeds before deploy
-- project owner can open the playtest URL in Chrome on Android
-
-### M0.6 - Portrait mobile shell
+### M0.6 — Portrait mobile shell
 Status: Complete
 
-Goal: verify that portrait is the preferred phone orientation.
+### M0.7 — Responsive portrait shell
+Status: Complete
 
 Result:
-- portrait direction accepted after device test
-- fixed 9:16 sizing and hard lower control panel rejected as the long-term shell
+- portrait retained
+- fixed 9:16 runtime sizing rejected
+- responsive full-viewport gameplay accepted
+- lighter overlaid touch controls accepted as the combat foundation
 
-### M0.7 - Responsive portrait shell
-Status: In implementation
+### M1 — Combat sandbox
+Status: In progress
 
-Goal: make the playtest feel native to tall Android screens before combat work begins.
+Goal: determine whether movement, attack, dodge, and enemy interaction can feel responsive and readable on a phone.
 
-Locked decisions:
-- portrait remains the primary orientation
-- 720 x 1280 is a reference design space only
-- runtime display follows the actual available browser viewport
-- gameplay continues behind the lower controls
-- joystick and action controls are smaller, lighter overlays
-- lower safe-area spacing must keep controls clear of Android/browser navigation UI
-
-Acceptance criteria:
-- no large unused letterbox area caused by forcing 9:16 on a taller phone
-- map visually fills the playable webpage viewport
-- joystick and ATTACK remain comfortably reachable with two thumbs
-- controls do not read as a separate remote-control panel
-- player can move across the full visible gameplay space without disappearing under browser UI
-- viewport resize/orientation changes do not break control positions or physics bounds
-- GitHub Pages build deploys successfully
-
-### M1 - Combat sandbox
-Status: Ready for implementation after M0.7 device check
-
-Goal: determine whether basic movement, attack, dodge, and enemy interaction can feel responsive on a phone.
-
-Locked M1 combat decisions:
-1. Basic attack uses the player's current facing direction. It does not automatically rotate the character toward a target.
-2. Dodge is a directional dash based on current movement input, with a short invulnerability window.
-3. Enemies do not deal damage merely by touching the player. Damage must come from an explicit, readable enemy attack/telegraph.
-4. Hit feedback should be arcade-heavy for the prototype: strong hit-stop, knockback, flash/impact feedback, and other inexpensive readable effects are encouraged.
-5. Soft aim assistance is enabled: attacks may receive a small directional correction toward a nearby valid enemy, but no hard lock-on is used.
-
-Planned scope:
-- player facing direction
-- melee attack range/hitbox
-- attack startup/contact/recovery timing
-- attack cooldown/state gating
-- soft directional aim correction
-- 1 simple enemy archetype
-- enemy telegraph + explicit attack
-- enemy HP
-- player HP
-- damage handling
-- knockback
-- arcade-heavy hit feedback
-- directional dodge dash
-- dodge invulnerability frames
-- basic death/respawn loop
-- minimal combat HUD
-
-Acceptance criteria:
+M1 acceptance criteria:
 - player can move, attack, dodge, take damage, kill an enemy, die, and respawn
 - controls are usable with two thumbs in portrait orientation
-- attacks have clearly readable startup/contact/recovery feedback
+- attacks have readable startup/contact/recovery
 - enemy attacks are readable before they deal damage
-- touching an enemy alone does not cause damage
-- dash direction follows movement intent and includes a short invulnerability window
-- soft aim correction helps near-miss attacks without feeling like hard lock-on
-- successful hits have intentionally strong arcade-style impact feedback
+- touching an enemy alone causes no damage
+- dash follows movement intent and includes a short invulnerability window
+- soft aim helps near misses without feeling like hard lock
+- successful hits have strong arcade-style feedback
 - no game-breaking input/state bug during a 3-minute continuous fight test
 
 Decision gate after M1:
-- If combat does not feel promising, tune/rework controls and timings before adding more systems.
-- If combat feels promising, proceed to enemy variety and skills.
+- if combat does not feel promising, tune/rework before adding systems
+- if promising, proceed to enemy variety and skills
 
-### M2 - Combat depth
+### M2 — Combat depth
 Status: Planned
 
-Goal: test whether combat remains interesting beyond one repeated attack pattern.
+Scope: 3 enemy archetypes total, 3 active prototype skills, cooldowns, clearer telegraphs, encounter composition.
 
-Planned scope:
-- 3 enemy archetypes total
-- 3 active prototype skills
-- skill cooldowns
-- clearer telegraphs
-- stronger hit feedback
-- simple combat encounter composition
-
-Acceptance criteria:
-- enemy types demand meaningfully different reactions
-- skills create tactical choices rather than acting as cosmetic variants
-- touch UI remains readable and comfortable
-
-### M3 - Reward and progression loop
+### M3 — Reward and progression loop
 Status: Planned
 
-Goal: validate fight -> loot -> upgrade -> fight motivation.
+Scope: XP/levels, basic stats, weapon + armor, loot, simple inventory/equipment UI, checkpoint progression.
 
-Planned scope:
-- XP/level growth
-- basic stats
-- weapon + armor equipment
-- loot drops
-- simple inventory/equipment UI
-- checkpoint progression
-
-Acceptance criteria:
-- upgrades produce noticeable but controlled power growth
-- player can understand why an item is better/worse
-- the progression loop does not interrupt combat excessively
-
-### M4 - Prototype map and boss
+### M4 — Prototype map and boss
 Status: Planned
 
-Goal: assemble the mechanics into one 10-20 minute prototype session.
+Scope: one portrait-oriented map, encounter flow, checkpoint, one boss, 10-20 minute prototype session.
 
-Planned scope:
-- one small exploration/combat map designed for portrait framing
-- encounter flow
-- checkpoint placement
-- one boss
-- boss telegraphs/patterns
-- prototype start/end flow
-
-Acceptance criteria:
-- full session can be completed from start to boss
-- boss tests movement, attack, dodge, and skill use
-- no required mechanic is introduced only during the boss
-
-### M5 - Mobile prototype validation
+### M5 — Mobile prototype validation
 Status: Planned
 
-Goal: decide whether PJ001 should advance beyond prototype.
-
-Validation areas:
-- combat fun
-- portrait touch ergonomics
-- clarity/readability
-- pacing
-- progression motivation
-- Android/mobile browser performance
-
-Output:
-- go / revise / stop decision
-- prioritized findings
-- updated roadmap only if the prototype passes the gate
+Output: go / revise / stop decision based on combat fun, ergonomics, readability, pacing, progression motivation, and phone performance.
 
 ## 8. Explicitly out of scope until prototype validation
-- story campaign
-- large world
-- multiplayer
-- online services
-- accounts/cloud saves
-- monetization
-- ads/IAP
-- extensive crafting
-- large item database
-- large skill tree
+- story campaign / large world
+- multiplayer / online services / accounts / cloud saves
+- monetization / ads / IAP
+- extensive crafting / large item database / large skill tree
 - production-quality art pipeline
 - localization
 - Play Store release work
-- APK packaging beyond what is needed for later validation
+- APK packaging beyond later validation needs
 
 ## 9. Workflow for every milestone
 Before implementation:
-1. Re-read this plan and inspect the current repository state.
+1. Re-read this plan and inspect current repository state.
 2. Define the validation question.
-3. Identify only the decisions that can materially change implementation.
-4. Record assumptions.
-5. Define scope and acceptance criteria.
-6. Break work into small implementation tasks.
+3. Identify only decisions that materially change implementation.
+4. Record assumptions and acceptance criteria.
+5. Break work into the smallest testable slice.
 
 During implementation:
 1. Create a milestone branch.
-2. Implement the smallest testable slice first.
-3. Keep commits focused.
-4. Run build/CI checks.
-5. Avoid unrelated refactors.
+2. Keep commits focused.
+3. Run build/CI checks.
+4. Avoid unrelated refactors.
 
 Before merge:
-1. Verify acceptance criteria that are testable without the project owner.
-2. Record unresolved issues and device-test items.
+1. Verify machine-testable acceptance criteria.
+2. Record device-test items.
 3. Open/review PR.
-4. Merge only when the milestone state is coherent.
+4. Merge only when coherent.
 
 After device testing:
 1. Record what was learned.
-2. Lock or revise decisions.
+2. Tune or lock decisions.
 3. Update this plan.
-4. Only then plan the next milestone.
+4. Continue to the next slice.
 
-## 10. M1 implementation task breakdown
+## 10. M1 implementation breakdown
 
-### M1.1 - Facing and attack state
-- Track player facing direction separately from instantaneous velocity.
-- Add attack state/timing: startup, active, recovery.
-- Replace button-only feedback with a real melee hitbox.
-- Prevent uncontrolled attack spam through explicit state gating.
+### M1.1 — Facing and attack state
+Status: Complete
 
-Done when:
-- attack occurs in the player's facing direction
-- hitbox is only active during the intended attack window
-- repeated taps cannot create overlapping uncontrolled attacks
+Implemented:
+- facing tracked separately from instantaneous velocity
+- startup / active / recovery attack phases
+- real melee hitbox active only during intended window
+- state gating prevents overlapping attack spam
 
-### M1.2 - First enemy and damage model
-- Add one simple enemy with HP.
-- Add target detection for melee hits.
-- Add player-to-enemy damage.
-- Add knockback and arcade-heavy impact feedback.
+### M1.2 — First enemy and damage model
+Status: Complete, device-tuned
 
-Done when:
-- player can reliably kill the enemy
-- valid hits are visually obvious
-- misses are distinguishable from hits
+Implemented:
+- one enemy with HP
+- melee hit detection and player-to-enemy damage
+- one hit per attack
+- knockback + flash + impact + damage number + camera feedback
+- enemy respawns for repeated test cycles
 
-### M1.3 - Enemy telegraph and player damage
-- Add a readable enemy wind-up/telegraph.
-- Add explicit enemy attack window/hitbox.
-- Add player HP and damage response.
-- Ensure passive body contact does not cause damage.
+Current tuned values:
+- player move speed: 205
+- enemy knockback speed: 255
 
-Done when:
-- player can understand when an enemy is about to attack
-- damage only occurs from the enemy's explicit attack action
+### M1.3 — Enemy telegraph and player damage
+Status: In implementation
 
-### M1.4 - Dodge dash
-- Add a dedicated dodge control.
-- Dash in current movement direction; if movement input is neutral, use player facing direction as fallback.
-- Add short invulnerability frames.
-- Add cooldown/state gating.
+Scope:
+- readable enemy wind-up/telegraph
+- explicit enemy attack window and hitbox
+- player HP HUD
+- player damage response
+- each enemy attack can damage player at most once
+- passive enemy/player body contact causes no damage
 
 Done when:
-- dodge can evade a telegraphed enemy attack
-- repeated tapping cannot create permanent invulnerability
+- player can identify an incoming attack before its damage window
+- damage occurs only inside the explicit enemy attack window
+- standing against/touching the enemy without an attack does not reduce HP
+- hit response is visible on a phone
 
-### M1.5 - Soft aim assistance
-- Detect nearby valid enemies within a narrow angular/range tolerance.
-- Apply only a small correction to attack direction.
-- Never create persistent lock-on or camera behavior.
+Intentionally deferred:
+- dodge and i-frames (M1.4)
+- soft aim (M1.5)
+- player death/respawn loop (M1.6)
 
-Done when:
-- near-miss attacks feel more forgiving on touch controls
-- the player still controls the overall attack direction
+### M1.4 — Dodge dash
+Status: Planned
 
-### M1.6 - Death, respawn, HUD, and sandbox pass
-- Add minimal HP HUD.
-- Add player death.
-- Add checkpoint/sandbox respawn.
-- Tune initial timings for attack, dash, enemy attack, hit-stop, and knockback.
-- Run continuous combat sanity tests.
+- dedicated dodge control
+- dash in movement direction, facing fallback when neutral
+- short i-frames
+- cooldown/state gating
 
-Done when:
-- complete M1 loop works: move -> attack -> dodge -> take damage -> kill -> die -> respawn
-- build passes
-- ready for Android phone play-test
+### M1.5 — Soft aim assistance
+Status: Planned
 
-## 11. M1 parameters that remain tunable, not design-blocking
+- narrow nearby target detection
+- small directional correction only
+- no persistent lock-on/camera behavior
+
+### M1.6 — Death, respawn, HUD, sandbox pass
+Status: Planned
+
+- complete HP/death/checkpoint respawn loop
+- tune attack/dash/enemy timing/hit-stop/knockback
+- 3-minute continuous combat sanity test
+
+## 11. Tunable M1 parameters — not design-blocking
 - player move speed
-- attack startup/active/recovery durations
-- melee range/arc
-- basic damage values
-- enemy HP
-- enemy wind-up duration
-- dash speed/distance
-- invulnerability duration
-- attack/dodge cooldowns
+- player/enemy HP and damage
+- player attack startup/active/recovery
+- melee range/size
+- enemy wind-up/active/recovery timing
+- enemy attack range/size
+- dash distance/speed/i-frame duration/cooldown
 - soft aim angle/range
-- hit-stop duration
-- knockback force
+- hit-stop, shake, knockback
 
-These values are implementation parameters, not product decisions, until testing proves otherwise.
-
-## 12. Open issues and risks
-- The repository is currently Public. This is a project/account setting rather than a gameplay decision.
-- Portrait combat has less horizontal visibility than landscape; encounter composition and camera behavior must account for this.
-- Browser viewport dimensions and chrome can change while playing; resize handling must keep UI and physics coherent.
-- Touch-control overlay must remain readable when combat effects and enemies occupy the lower screen.
-- Placeholder controls may need substantial tuning after device testing.
-- Arcade-heavy feedback must remain readable and performant on the target phone.
-- Soft aim assistance can become intrusive if its angle/range is too generous; it must remain a correction rather than auto-targeting.
-- Performance must eventually be verified on the target phone, not inferred from desktop/browser tests.
+## 12. Open risks
+- portrait provides less horizontal visibility than landscape
+- browser viewport can change while playing
+- lower overlay controls can visually compete with combat near the bottom
+- enemy telegraph must remain legible under hit effects
+- soft aim can become intrusive if too generous
+- final performance must be verified on target phone
+- repository is currently Public
 
 ## 13. Definition of prototype success
-PJ001 prototype succeeds if, after a 10-20 minute mobile portrait session, the combat is responsive, understandable, and enjoyable enough to justify producing more content.
-
-Content quantity, polish, monetization potential, and visual fidelity are secondary until that condition is met.
+PJ001 succeeds at prototype stage if, after a 10-20 minute portrait mobile session, combat is responsive, understandable, and enjoyable enough to justify producing more content.
