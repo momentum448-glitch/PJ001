@@ -18,15 +18,19 @@ export class GameScene extends Phaser.Scene {
   private lastEnemyHitAttackId = -1;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private dodgeKey?: Phaser.Input.Keyboard.Key;
   private moveVector = new Phaser.Math.Vector2();
   private facing = new Phaser.Math.Vector2(1, 0);
   private joystickPointerId: number | null = null;
+
   private background!: Phaser.GameObjects.Graphics;
   private controlShade!: Phaser.GameObjects.Rectangle;
   private joystickBase!: Phaser.GameObjects.Arc;
   private joystickKnob!: Phaser.GameObjects.Arc;
   private attackButton!: Phaser.GameObjects.Arc;
   private attackLabel!: Phaser.GameObjects.Text;
+  private dodgeButton!: Phaser.GameObjects.Arc;
+  private dodgeLabel!: Phaser.GameObjects.Text;
   private title!: Phaser.GameObjects.Text;
   private subtitle!: Phaser.GameObjects.Text;
   private facingIndicator!: Phaser.GameObjects.Line;
@@ -46,10 +50,16 @@ export class GameScene extends Phaser.Scene {
   private lastPlayerHitEnemyAttackId = -1;
   private nextEnemyAttackAt = 0;
 
+  private isDodging = false;
+  private dodgeDirection = new Phaser.Math.Vector2(1, 0);
+  private dodgeEndsAt = 0;
+  private dodgeReadyAt = 0;
+
   private joystickRadius = 54;
 
   private readonly playerMaxHp = 5;
   private readonly playerMoveSpeed = 205;
+
   private readonly attackStartupMs = 90;
   private readonly attackActiveMs = 90;
   private readonly attackRecoveryMs = 170;
@@ -68,6 +78,10 @@ export class GameScene extends Phaser.Scene {
   private readonly enemyAttackLength = 96;
   private readonly enemyAttackWidth = 76;
 
+  private readonly dodgeDurationMs = 150;
+  private readonly dodgeCooldownMs = 650;
+  private readonly dodgeSpeed = 520;
+
   constructor() {
     super('game');
   }
@@ -82,12 +96,12 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(5);
 
-    this.title = this.add.text(18, 16, 'PJ001 · M1.3 Combat', {
+    this.title = this.add.text(18, 16, 'PJ001 · M1.4 Dodge', {
       fontSize: '18px',
       color: '#e9f5ef'
     }).setScrollFactor(0).setDepth(10);
 
-    this.subtitle = this.add.text(18, 42, 'Enemy telegraphs before damage · contact alone is safe', {
+    this.subtitle = this.add.text(18, 42, 'Dodge through the red attack window · contact alone is safe', {
       fontSize: '11px',
       color: '#a9c9b8'
     }).setScrollFactor(0).setDepth(10);
@@ -130,8 +144,7 @@ export class GameScene extends Phaser.Scene {
     this.attackHitbox = this.add.zone(0, 0, this.attackHitboxLength, this.attackHitboxWidth).setDepth(4);
     this.physics.add.existing(this.attackHitbox);
     this.attackHitboxBody = this.attackHitbox.body as Phaser.Physics.Arcade.Body;
-    this.attackHitboxBody.setAllowGravity(false);
-    this.attackHitboxBody.setImmovable(true);
+    this.attackHitboxBody.setAllowGravity(false).setImmovable(true);
     this.attackHitboxBody.enable = false;
 
     this.attackVisual = this.add.rectangle(0, 0, this.attackHitboxLength, this.attackHitboxWidth, 0xffdf7a, 0)
@@ -141,23 +154,18 @@ export class GameScene extends Phaser.Scene {
     this.enemyAttackHitbox = this.add.zone(0, 0, this.enemyAttackLength, this.enemyAttackWidth).setDepth(4);
     this.physics.add.existing(this.enemyAttackHitbox);
     this.enemyAttackHitboxBody = this.enemyAttackHitbox.body as Phaser.Physics.Arcade.Body;
-    this.enemyAttackHitboxBody.setAllowGravity(false);
-    this.enemyAttackHitboxBody.setImmovable(true);
+    this.enemyAttackHitboxBody.setAllowGravity(false).setImmovable(true);
     this.enemyAttackHitboxBody.enable = false;
 
-    this.enemyAttackVisual = this.add.rectangle(
-      0,
-      0,
-      this.enemyAttackLength,
-      this.enemyAttackWidth,
-      0xffa43a,
-      0
-    ).setStrokeStyle(3, 0xffd27a, 0).setDepth(1);
+    this.enemyAttackVisual = this.add.rectangle(0, 0, this.enemyAttackLength, this.enemyAttackWidth, 0xffa43a, 0)
+      .setStrokeStyle(3, 0xffd27a, 0)
+      .setDepth(1);
 
     this.physics.add.overlap(this.attackHitbox, this.enemy, () => this.onAttackHitsEnemy());
     this.physics.add.overlap(this.enemyAttackHitbox, this.player, () => this.onEnemyAttackHitsPlayer());
 
     this.cursors = this.input.keyboard?.createCursorKeys() ?? ({} as Phaser.Types.Input.Keyboard.CursorKeys);
+    this.dodgeKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
     this.joystickBase = this.add.circle(0, 0, this.joystickRadius, 0xffffff, 0.07)
       .setStrokeStyle(2, 0xffffff, 0.2)
@@ -178,8 +186,21 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(11).setInteractive();
 
+    this.dodgeButton = this.add.circle(0, 0, 39, 0x4d8bd6, 0.56)
+      .setStrokeStyle(3, 0xcfe5ff, 0.62)
+      .setScrollFactor(0)
+      .setDepth(10)
+      .setInteractive();
+    this.dodgeLabel = this.add.text(0, 0, 'DODGE', {
+      fontSize: '11px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(11).setInteractive();
+
     this.attackButton.on('pointerdown', () => this.tryAttack());
     this.attackLabel.on('pointerdown', () => this.tryAttack());
+    this.dodgeButton.on('pointerdown', () => this.tryDodge());
+    this.dodgeLabel.on('pointerdown', () => this.tryDodge());
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (
@@ -219,13 +240,26 @@ export class GameScene extends Phaser.Scene {
       Number(Boolean(this.cursors.down?.isDown)) - Number(Boolean(this.cursors.up?.isDown))
     );
 
+    if (this.dodgeKey && Phaser.Input.Keyboard.JustDown(this.dodgeKey)) {
+      this.tryDodge();
+    }
+
     const movement = keyboardVector.lengthSq() > 0 ? keyboardVector.normalize() : this.moveVector;
-    if (!this.playerDown && movement.lengthSq() > 0.01) {
+
+    if (!this.playerDown && !this.isDodging && movement.lengthSq() > 0.01) {
       this.facing.copy(movement).normalize();
     }
 
     if (this.playerDown) {
       this.playerBody.setVelocity(0, 0);
+    } else if (this.isDodging) {
+      this.playerBody.setVelocity(
+        this.dodgeDirection.x * this.dodgeSpeed,
+        this.dodgeDirection.y * this.dodgeSpeed
+      );
+      if (this.time.now >= this.dodgeEndsAt) {
+        this.endDodge();
+      }
     } else {
       this.playerBody.setVelocity(
         movement.x * this.playerMoveSpeed,
@@ -234,15 +268,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateFacingIndicator();
+    this.updateDodgeButtonState();
 
     if (this.attackPhase === 'active') {
       this.positionAttackHitbox();
     }
-
     if (this.enemyAlive) {
       this.updateEnemyHud();
     }
-
     if (this.enemyAttackPhase !== 'idle') {
       this.positionEnemyAttackArea();
     }
@@ -267,6 +300,7 @@ export class GameScene extends Phaser.Scene {
     const safeBottom = Phaser.Math.Clamp(height * 0.052, 36, 62);
     this.joystickRadius = Phaser.Math.Clamp(width * 0.08, 49, 58);
     const attackRadius = Phaser.Math.Clamp(width * 0.072, 45, 53);
+    const dodgeRadius = Phaser.Math.Clamp(width * 0.058, 35, 42);
 
     this.redrawBackground(width, height);
 
@@ -282,6 +316,11 @@ export class GameScene extends Phaser.Scene {
     const attackY = height - safeBottom - attackRadius - 12;
     this.attackButton.setPosition(attackX, attackY).setRadius(attackRadius);
     this.attackLabel.setPosition(attackX, attackY);
+
+    const dodgeX = attackX - attackRadius - dodgeRadius - 18;
+    const dodgeY = attackY - 28;
+    this.dodgeButton.setPosition(dodgeX, dodgeY).setRadius(dodgeRadius);
+    this.dodgeLabel.setPosition(dodgeX, dodgeY);
 
     this.title.setPosition(safeSide, 16);
     this.subtitle.setPosition(safeSide, 42);
@@ -364,8 +403,65 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private tryDodge(): void {
+    if (
+      this.playerDown ||
+      this.isDodging ||
+      this.attackPhase !== 'idle' ||
+      this.time.now < this.dodgeReadyAt
+    ) {
+      return;
+    }
+
+    const intent = this.moveVector.lengthSq() > 0.04
+      ? this.moveVector.clone().normalize()
+      : this.facing.clone().normalize();
+
+    this.dodgeDirection.copy(intent);
+    this.facing.copy(intent);
+    this.isDodging = true;
+    this.dodgeEndsAt = this.time.now + this.dodgeDurationMs;
+    this.dodgeReadyAt = this.time.now + this.dodgeCooldownMs;
+
+    this.player.setAlpha(0.48).setStrokeStyle(4, 0xb9dcff, 1);
+    this.dodgeButton.setAlpha(0.35);
+
+    const trail = this.add.rectangle(this.player.x, this.player.y, 38, 38, 0xb9dcff, 0.28).setDepth(1);
+    this.tweens.add({
+      targets: trail,
+      alpha: 0,
+      scale: 1.4,
+      duration: this.dodgeDurationMs + 90,
+      onComplete: () => trail.destroy()
+    });
+  }
+
+  private endDodge(): void {
+    if (!this.isDodging) {
+      return;
+    }
+    this.isDodging = false;
+    this.player.setAlpha(1).setStrokeStyle(3, 0xeafff2, 1);
+  }
+
+  private updateDodgeButtonState(): void {
+    if (this.isDodging) {
+      this.dodgeLabel.setText('DODGE');
+      return;
+    }
+
+    const remaining = Math.max(0, this.dodgeReadyAt - this.time.now);
+    if (remaining > 0) {
+      this.dodgeButton.setAlpha(0.35);
+      this.dodgeLabel.setText(`${Math.ceil(remaining / 100) / 10}s`);
+    } else {
+      this.dodgeButton.setAlpha(1);
+      this.dodgeLabel.setText('DODGE');
+    }
+  }
+
   private tryAttack(): void {
-    if (this.playerDown || this.attackPhase !== 'idle') {
+    if (this.playerDown || this.isDodging || this.attackPhase !== 'idle') {
       return;
     }
 
@@ -502,9 +598,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyAttackId += 1;
     this.enemyAttackPhase = 'windup';
     this.positionEnemyAttackArea();
-    this.enemyAttackVisual
-      .setFillStyle(0xffa43a, 0.2)
-      .setStrokeStyle(3, 0xffd27a, 0.75);
+    this.enemyAttackVisual.setFillStyle(0xffa43a, 0.2).setStrokeStyle(3, 0xffd27a, 0.75);
     this.enemy.setStrokeStyle(4, 0xffd27a, 1);
 
     this.time.delayedCall(this.enemyAttackWindupMs, () => {
@@ -519,9 +613,7 @@ export class GameScene extends Phaser.Scene {
     this.positionEnemyAttackArea();
     this.enemyAttackHitboxBody.enable = true;
     this.enemyAttackHitboxBody.updateFromGameObject();
-    this.enemyAttackVisual
-      .setFillStyle(0xff4b3e, 0.58)
-      .setStrokeStyle(3, 0xffc1a8, 0.95);
+    this.enemyAttackVisual.setFillStyle(0xff4b3e, 0.58).setStrokeStyle(3, 0xffc1a8, 0.95);
     this.enemy.setStrokeStyle(4, 0xffffff, 1);
     this.cameras.main.shake(55, 0.0024);
 
@@ -535,9 +627,7 @@ export class GameScene extends Phaser.Scene {
   private beginEnemyRecovery(): void {
     this.enemyAttackPhase = 'recovery';
     this.enemyAttackHitboxBody.enable = false;
-    this.enemyAttackVisual
-      .setFillStyle(0xff4b3e, 0.08)
-      .setStrokeStyle(2, 0xffc1a8, 0.18);
+    this.enemyAttackVisual.setFillStyle(0xff4b3e, 0.08).setStrokeStyle(2, 0xffc1a8, 0.18);
     if (this.enemyAlive) {
       this.enemy.setStrokeStyle(3, 0xffc4c4, 1);
     }
@@ -547,9 +637,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.enemyAttackPhase = 'idle';
-      this.enemyAttackVisual
-        .setFillStyle(0xff4b3e, 0)
-        .setStrokeStyle(2, 0xffc1a8, 0);
+      this.enemyAttackVisual.setFillStyle(0xff4b3e, 0).setStrokeStyle(2, 0xffc1a8, 0);
       this.nextEnemyAttackAt = this.time.now + this.enemyAttackCooldownMs;
     });
   }
@@ -564,14 +652,13 @@ export class GameScene extends Phaser.Scene {
     this.enemyAttackHitbox.setPosition(x, y).setSize(width, height);
     this.enemyAttackHitboxBody.setSize(width, height);
     this.enemyAttackHitboxBody.updateFromGameObject();
-    this.enemyAttackVisual
-      .setPosition(x, y)
-      .setSize(width, height);
+    this.enemyAttackVisual.setPosition(x, y).setSize(width, height);
   }
 
   private onEnemyAttackHitsPlayer(): void {
     if (
       this.playerDown ||
+      this.isDodging ||
       this.enemyAttackPhase !== 'active' ||
       this.lastPlayerHitEnemyAttackId === this.enemyAttackId
     ) {
@@ -584,7 +671,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player.setFillStyle(0xffffff).setScale(1.1);
     this.time.delayedCall(90, () => {
-      if (!this.playerDown) {
+      if (!this.playerDown && !this.isDodging) {
         this.player.setFillStyle(0x68d391).setScale(1);
       }
     });
@@ -607,8 +694,9 @@ export class GameScene extends Phaser.Scene {
 
     if (this.playerHp <= 0) {
       this.playerDown = true;
+      this.isDodging = false;
       this.playerBody.setVelocity(0, 0);
-      this.player.setFillStyle(0x7d9186).setScale(1);
+      this.player.setAlpha(1).setFillStyle(0x7d9186).setScale(1);
       this.subtitle.setText('PLAYER DOWN · reload page to reset · death/respawn comes in M1.6');
       this.cancelEnemyAttack();
     }
@@ -617,9 +705,7 @@ export class GameScene extends Phaser.Scene {
   private cancelEnemyAttack(): void {
     this.enemyAttackPhase = 'idle';
     this.enemyAttackHitboxBody.enable = false;
-    this.enemyAttackVisual
-      .setFillStyle(0xff4b3e, 0)
-      .setStrokeStyle(2, 0xffc1a8, 0);
+    this.enemyAttackVisual.setFillStyle(0xff4b3e, 0).setStrokeStyle(2, 0xffc1a8, 0);
     if (this.enemyAlive) {
       this.enemy.setStrokeStyle(3, 0xffc4c4, 1);
     }
