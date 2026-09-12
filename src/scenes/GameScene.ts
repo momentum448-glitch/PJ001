@@ -5,6 +5,13 @@ type AttackPhase = 'idle' | 'startup' | 'active' | 'recovery';
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Rectangle;
   private playerBody!: Phaser.Physics.Arcade.Body;
+  private enemy!: Phaser.GameObjects.Rectangle;
+  private enemyBody!: Phaser.Physics.Arcade.Body;
+  private enemyHpText!: Phaser.GameObjects.Text;
+  private enemyHp = 3;
+  private enemyAlive = true;
+  private lastEnemyHitAttackId = -1;
+
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private moveVector = new Phaser.Math.Vector2();
   private facing = new Phaser.Math.Vector2(1, 0);
@@ -22,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   private attackHitboxBody!: Phaser.Physics.Arcade.Body;
   private attackVisual!: Phaser.GameObjects.Rectangle;
   private attackPhase: AttackPhase = 'idle';
+  private attackId = 0;
   private joystickRadius = 54;
 
   private readonly attackStartupMs = 90;
@@ -30,6 +38,8 @@ export class GameScene extends Phaser.Scene {
   private readonly attackReach = 62;
   private readonly attackHitboxLength = 74;
   private readonly attackHitboxWidth = 58;
+  private readonly enemyMaxHp = 3;
+  private readonly enemyKnockbackSpeed = 360;
 
   constructor() {
     super('game');
@@ -45,12 +55,12 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(5);
 
-    this.title = this.add.text(18, 16, 'PJ001 · M1.1 Combat', {
+    this.title = this.add.text(18, 16, 'PJ001 · M1.2 Enemy', {
       fontSize: '18px',
       color: '#e9f5ef'
     }).setScrollFactor(0).setDepth(10);
 
-    this.subtitle = this.add.text(18, 42, 'Facing + startup / active / recovery', {
+    this.subtitle = this.add.text(18, 42, 'Hit the red enemy · 3 hits to defeat', {
       fontSize: '12px',
       color: '#a9c9b8'
     }).setScrollFactor(0).setDepth(10);
@@ -61,6 +71,22 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.existing(this.player);
     this.playerBody = this.player.body as Phaser.Physics.Arcade.Body;
     this.playerBody.setCollideWorldBounds(true);
+
+    this.enemy = this.add.rectangle(0, 0, 50, 50, 0xd95c5c)
+      .setStrokeStyle(3, 0xffc4c4)
+      .setDepth(2);
+    this.physics.add.existing(this.enemy);
+    this.enemyBody = this.enemy.body as Phaser.Physics.Arcade.Body;
+    this.enemyBody.setCollideWorldBounds(true);
+    this.enemyBody.setDrag(1100, 1100);
+    this.enemyBody.setMaxVelocity(420, 420);
+
+    this.enemyHpText = this.add.text(0, 0, 'HP 3/3', {
+      fontSize: '12px',
+      color: '#ffd9d9',
+      backgroundColor: '#351717aa',
+      padding: { x: 5, y: 2 }
+    }).setOrigin(0.5).setDepth(4);
 
     this.facingIndicator = this.add.line(0, 0, 0, 0, 34, 0, 0xfff1a8, 0.9)
       .setLineWidth(3)
@@ -77,6 +103,12 @@ export class GameScene extends Phaser.Scene {
     this.attackVisual = this.add.rectangle(0, 0, this.attackHitboxLength, this.attackHitboxWidth, 0xffdf7a, 0)
       .setStrokeStyle(2, 0xfff0ad, 0)
       .setDepth(3);
+
+    this.physics.add.overlap(
+      this.attackHitbox,
+      this.enemy,
+      () => this.onAttackHitsEnemy()
+    );
 
     this.cursors = this.input.keyboard?.createCursorKeys() ?? ({} as Phaser.Types.Input.Keyboard.CursorKeys);
 
@@ -132,6 +164,7 @@ export class GameScene extends Phaser.Scene {
 
     this.layout(this.scale.width, this.scale.height);
     this.updateFacingIndicator();
+    this.updateEnemyHud();
   }
 
   update(): void {
@@ -151,6 +184,10 @@ export class GameScene extends Phaser.Scene {
 
     if (this.attackPhase === 'active') {
       this.positionAttackHitbox();
+    }
+
+    if (this.enemyAlive) {
+      this.updateEnemyHud();
     }
   }
 
@@ -186,9 +223,10 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, width, height);
     this.playerBody.setCollideWorldBounds(true);
+    this.enemyBody.setCollideWorldBounds(true);
 
     if (this.player.x === 0 && this.player.y === 0) {
-      this.player.setPosition(width * 0.5, height * 0.42);
+      this.player.setPosition(width * 0.5, height * 0.56);
     } else {
       this.player.setPosition(
         Phaser.Math.Clamp(this.player.x, 28, width - 28),
@@ -196,7 +234,19 @@ export class GameScene extends Phaser.Scene {
       );
     }
 
+    if (this.enemy.x === 0 && this.enemy.y === 0) {
+      this.enemy.setPosition(width * 0.5, height * 0.32);
+      this.enemyBody.updateFromGameObject();
+    } else if (this.enemyAlive) {
+      this.enemy.setPosition(
+        Phaser.Math.Clamp(this.enemy.x, 30, width - 30),
+        Phaser.Math.Clamp(this.enemy.y, 92, height - 30)
+      );
+      this.enemyBody.updateFromGameObject();
+    }
+
     this.updateFacingIndicator();
+    this.updateEnemyHud();
     if (this.attackPhase === 'active') {
       this.positionAttackHitbox();
     }
@@ -254,6 +304,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.attackId += 1;
     this.attackPhase = 'startup';
     this.attackButton.setAlpha(0.72);
     this.attackVisual.setAlpha(0.14).setStrokeStyle(2, 0xfff0ad, 0.28);
@@ -313,5 +364,125 @@ export class GameScene extends Phaser.Scene {
       .setPosition(x, y)
       .setSize(width, height)
       .setRotation(Math.atan2(this.facing.y, this.facing.x));
+  }
+
+  private onAttackHitsEnemy(): void {
+    if (
+      !this.enemyAlive ||
+      this.attackPhase !== 'active' ||
+      this.lastEnemyHitAttackId === this.attackId
+    ) {
+      return;
+    }
+
+    this.lastEnemyHitAttackId = this.attackId;
+    this.enemyHp = Math.max(0, this.enemyHp - 1);
+
+    const knockback = new Phaser.Math.Vector2(
+      this.enemy.x - this.player.x,
+      this.enemy.y - this.player.y
+    );
+    if (knockback.lengthSq() < 0.001) {
+      knockback.copy(this.facing);
+    } else {
+      knockback.normalize();
+    }
+
+    this.enemyBody.setVelocity(
+      knockback.x * this.enemyKnockbackSpeed,
+      knockback.y * this.enemyKnockbackSpeed
+    );
+
+    this.enemy.setFillStyle(0xffffff);
+    this.enemy.setScale(1.12);
+    this.time.delayedCall(70, () => {
+      if (this.enemyAlive) {
+        this.enemy.setFillStyle(0xd95c5c);
+        this.enemy.setScale(1);
+      }
+    });
+
+    const impact = this.add.circle(this.enemy.x, this.enemy.y, 18, 0xfff2a8, 0.95).setDepth(6);
+    this.tweens.add({
+      targets: impact,
+      alpha: 0,
+      scale: 2.1,
+      duration: 130,
+      ease: 'Quad.Out',
+      onComplete: () => impact.destroy()
+    });
+
+    const damageText = this.add.text(this.enemy.x, this.enemy.y - 34, '-1', {
+      fontSize: '20px',
+      color: '#fff2a8',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(7);
+    this.tweens.add({
+      targets: damageText,
+      y: damageText.y - 32,
+      alpha: 0,
+      duration: 360,
+      ease: 'Quad.Out',
+      onComplete: () => damageText.destroy()
+    });
+
+    this.cameras.main.shake(75, 0.0042);
+    this.updateEnemyHud();
+
+    if (this.enemyHp <= 0) {
+      this.defeatEnemy();
+    }
+  }
+
+  private defeatEnemy(): void {
+    this.enemyAlive = false;
+    this.enemyBody.enable = false;
+    this.enemyHpText.setText('DEFEATED').setColor('#fff2a8');
+
+    this.tweens.add({
+      targets: this.enemy,
+      alpha: 0,
+      scale: 1.5,
+      angle: 20,
+      duration: 240,
+      ease: 'Quad.In',
+      onComplete: () => {
+        this.enemy.setVisible(false);
+        this.time.delayedCall(900, () => this.respawnEnemy());
+      }
+    });
+  }
+
+  private respawnEnemy(): void {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    this.enemyHp = this.enemyMaxHp;
+    this.enemyAlive = true;
+    this.lastEnemyHitAttackId = -1;
+    this.enemy
+      .setPosition(width * 0.5, height * 0.3)
+      .setAlpha(1)
+      .setScale(1)
+      .setAngle(0)
+      .setFillStyle(0xd95c5c)
+      .setVisible(true);
+    this.enemyBody.enable = true;
+    this.enemyBody.setVelocity(0, 0);
+    this.enemyBody.updateFromGameObject();
+    this.updateEnemyHud();
+  }
+
+  private updateEnemyHud(): void {
+    if (!this.enemyHpText || !this.enemy) {
+      return;
+    }
+
+    this.enemyHpText.setPosition(this.enemy.x, this.enemy.y - 42);
+    if (this.enemyAlive) {
+      this.enemyHpText
+        .setText(`HP ${this.enemyHp}/${this.enemyMaxHp}`)
+        .setColor('#ffd9d9')
+        .setVisible(true);
+    }
   }
 }
