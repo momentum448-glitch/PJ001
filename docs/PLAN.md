@@ -1,7 +1,7 @@
 # PJ001 Development Plan
 
-Version: 0.6  
-Status: M1 combat sandbox in implementation — M1.4 active  
+Version: 0.7  
+Status: M1 combat sandbox in implementation — M1.5 active  
 Source of truth: this repository
 
 ## 1. Problem and outcome
@@ -56,19 +56,23 @@ Completed:
 - M1.1 facing + timed melee attack
 - M1.2 first enemy + HP + damage + tuned knockback
 - M1.3 enemy telegraph + explicit enemy attack + player HP/damage, device-tested OK
+- M1.4 dodge dash + i-frames + cooldown/state gating, device-tested and tuned
 
 Current tuned values from device feedback:
-- player move speed: 205
+- player move speed: 195
 - enemy knockback speed: 255
+- dodge speed: 450
+- dodge duration / i-frame window: 150 ms
+- dodge cooldown: 650 ms
 
 Stable playtest URL:
 `https://momentum448-glitch.github.io/PJ001/`
 
 Current implementation target:
-**M1.4 — directional dodge dash + i-frames + cooldown/state gating.**
+**M1.5 — soft aim assistance for melee attacks.**
 
-M1.4 validation question:
-> Can the player intentionally evade the readable enemy attack with a touch-friendly dodge, without dodge becoming permanent invulnerability or fighting the movement controls?
+M1.5 validation question:
+> Can a small aim correction reduce frustrating near-misses on touch controls without taking attack direction control away from the player?
 
 ## 5. Working assumptions
 - Single-player, offline-first, melee-first combat
@@ -167,41 +171,45 @@ Implemented: enemy HP, melee damage, one hit per attack, knockback, flash/impact
 ### M1.3 — Enemy telegraph and player damage
 Status: Complete, device-tested OK
 
-Implemented:
-- enemy windup -> active -> recovery attack state
-- readable attack telegraph
-- explicit active-only enemy hitbox
-- player HP and hit response
-- one player hit maximum per enemy attack
-- passive body contact causes no damage
+Implemented: enemy windup -> active -> recovery, readable telegraph, explicit active-only hitbox, player HP/hit response, one hit maximum per enemy attack, and no passive contact damage.
 
 ### M1.4 — Dodge dash
-Status: In implementation
+Status: Complete, device-tested and tuned
 
 Locked behavior:
 - dedicated DODGE touch control
-- dash uses current movement input direction
-- when movement input is neutral, dash falls back to current facing
-- player is invulnerable only during the short dash window
-- dodge has explicit cooldown/state gating
-- attack cannot start during dodge; dodge cannot start during an attack
+- dash uses current movement input; facing fallback when neutral
+- player invulnerable only during dash
+- explicit cooldown/state gating
+- attack and dodge cannot start on top of each other
 
-Initial tunable values:
-- dash duration: ~150 ms
-- dash speed: ~520 px/s
-- i-frame window: same as dash duration for first test
-- cooldown: ~650 ms from dodge start
-
-Done when:
-- player can intentionally dodge through a telegraphed enemy attack without taking damage
-- dodge direction is predictable from joystick/facing
-- repeated tapping cannot create continuous invulnerability
-- touch control remains comfortable beside ATTACK
+Accepted tuned values:
+- player move speed: 195
+- dash speed: 450
+- dash duration / i-frame: 150 ms
+- cooldown: 650 ms
 
 ### M1.5 — Soft aim assistance
-Status: Planned
+Status: In implementation
 
-Narrow nearby target detection, small directional correction only, no persistent lock-on/camera behavior.
+Locked behavior:
+- attack still starts from the player's manual facing direction
+- only a nearby living enemy inside a narrow forward cone is eligible
+- correction is partial and capped; attack never fully snaps to a target
+- no persistent target selection, lock-on marker, camera rotation, or automatic player facing change
+- correction is chosen when the attack begins and remains stable for that attack
+
+Initial tunable values:
+- eligibility range: ~155 px
+- forward cone: ~28 degrees from facing
+- maximum correction: ~14 degrees
+- correction strength: partial toward target, capped by the maximum correction
+
+Done when:
+- a small near-miss toward a nearby enemy is more likely to connect
+- attacks clearly outside the forward cone do not bend toward the enemy
+- the player still feels responsible for attack direction
+- there is no persistent lock-on behavior
 
 ### M1.6 — Death, respawn, HUD, sandbox pass
 Status: Planned
@@ -209,15 +217,14 @@ Status: Planned
 Complete HP/death/checkpoint respawn; tune combat timings; run 3-minute continuous sanity test.
 
 ## 11. Tunable M1 parameters — not design-blocking
-Player speed/HP, attack timings/range, enemy HP/attack timings/range, dash speed/duration/i-frame/cooldown, soft aim angle/range, hit-stop, shake, knockback.
+Player speed/HP, attack timings/range, enemy HP/attack timings/range, dash speed/duration/i-frame/cooldown, soft aim angle/range/correction cap, hit-stop, shake, knockback.
 
 ## 12. Open risks
 - portrait has less horizontal visibility than landscape
 - browser viewport can change while playing
 - lower controls can compete visually with combat
 - dodge button must fit future skill controls
-- i-frame duration can feel unfair if too generous or useless if too short
-- soft aim can become intrusive if too generous
+- soft aim can become intrusive if range/cone/correction is too generous
 - final performance must be verified on target phone
 - repository is currently Public
 
