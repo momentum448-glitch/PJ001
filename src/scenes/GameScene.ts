@@ -32,6 +32,7 @@ export class GameScene extends Phaser.Scene {
   private attackId = 0;
   private joystickRadius = 54;
 
+  private readonly playerMoveSpeed = 205;
   private readonly attackStartupMs = 90;
   private readonly attackActiveMs = 90;
   private readonly attackRecoveryMs = 170;
@@ -39,7 +40,7 @@ export class GameScene extends Phaser.Scene {
   private readonly attackHitboxLength = 74;
   private readonly attackHitboxWidth = 58;
   private readonly enemyMaxHp = 3;
-  private readonly enemyKnockbackSpeed = 360;
+  private readonly enemyKnockbackSpeed = 255;
 
   constructor() {
     super('game');
@@ -79,7 +80,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyBody = this.enemy.body as Phaser.Physics.Arcade.Body;
     this.enemyBody.setCollideWorldBounds(true);
     this.enemyBody.setDrag(1100, 1100);
-    this.enemyBody.setMaxVelocity(420, 420);
+    this.enemyBody.setMaxVelocity(320, 320);
 
     this.enemyHpText = this.add.text(0, 0, 'HP 3/3', {
       fontSize: '12px',
@@ -104,11 +105,7 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xfff0ad, 0)
       .setDepth(3);
 
-    this.physics.add.overlap(
-      this.attackHitbox,
-      this.enemy,
-      () => this.onAttackHitsEnemy()
-    );
+    this.physics.add.overlap(this.attackHitbox, this.enemy, () => this.onAttackHitsEnemy());
 
     this.cursors = this.input.keyboard?.createCursorKeys() ?? ({} as Phaser.Types.Input.Keyboard.CursorKeys);
 
@@ -135,10 +132,9 @@ export class GameScene extends Phaser.Scene {
     this.attackLabel.on('pointerdown', () => this.tryAttack());
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      const height = this.scale.height;
       if (
         pointer.x < this.scale.width * 0.5 &&
-        pointer.y > height * 0.56 &&
+        pointer.y > this.scale.height * 0.56 &&
         this.joystickPointerId === null
       ) {
         this.joystickPointerId = pointer.id;
@@ -158,9 +154,7 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-      this.layout(gameSize.width, gameSize.height);
-    });
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => this.layout(gameSize.width, gameSize.height));
 
     this.layout(this.scale.width, this.scale.height);
     this.updateFacingIndicator();
@@ -178,14 +172,15 @@ export class GameScene extends Phaser.Scene {
       this.facing.copy(movement).normalize();
     }
 
-    const speed = 235;
-    this.playerBody.setVelocity(movement.x * speed, movement.y * speed);
+    this.playerBody.setVelocity(
+      movement.x * this.playerMoveSpeed,
+      movement.y * this.playerMoveSpeed
+    );
     this.updateFacingIndicator();
 
     if (this.attackPhase === 'active') {
       this.positionAttackHitbox();
     }
-
     if (this.enemyAlive) {
       this.updateEnemyHud();
     }
@@ -200,22 +195,16 @@ export class GameScene extends Phaser.Scene {
     this.redrawBackground(width, height);
 
     const overlayHeight = Phaser.Math.Clamp(height * 0.19, 165, 235);
-    this.controlShade
-      .setPosition(0, height - overlayHeight)
-      .setSize(width, overlayHeight);
+    this.controlShade.setPosition(0, height - overlayHeight).setSize(width, overlayHeight);
 
     const joystickX = safeSide + this.joystickRadius + 6;
     const controlsY = height - safeBottom - this.joystickRadius - 10;
-    this.joystickBase
-      .setPosition(joystickX, controlsY)
-      .setRadius(this.joystickRadius);
+    this.joystickBase.setPosition(joystickX, controlsY).setRadius(this.joystickRadius);
     this.joystickKnob.setPosition(joystickX, controlsY);
 
     const attackX = width - safeSide - attackRadius - 8;
     const attackY = height - safeBottom - attackRadius - 12;
-    this.attackButton
-      .setPosition(attackX, attackY)
-      .setRadius(attackRadius);
+    this.attackButton.setPosition(attackX, attackY).setRadius(attackRadius);
     this.attackLabel.setPosition(attackX, attackY);
 
     this.title.setPosition(safeSide, 16);
@@ -286,10 +275,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateFacingIndicator(): void {
-    if (!this.facingIndicator || !this.player) {
-      return;
-    }
-
     const length = 34;
     this.facingIndicator.setTo(
       this.player.x,
@@ -311,10 +296,9 @@ export class GameScene extends Phaser.Scene {
     this.positionAttackHitbox();
 
     this.time.delayedCall(this.attackStartupMs, () => {
-      if (this.attackPhase !== 'startup') {
-        return;
+      if (this.attackPhase === 'startup') {
+        this.beginActiveAttack();
       }
-      this.beginActiveAttack();
     });
   }
 
@@ -327,10 +311,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(45, 0.0018);
 
     this.time.delayedCall(this.attackActiveMs, () => {
-      if (this.attackPhase !== 'active') {
-        return;
+      if (this.attackPhase === 'active') {
+        this.beginRecovery();
       }
-      this.beginRecovery();
     });
   }
 
@@ -350,9 +333,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private positionAttackHitbox(): void {
-    const centerDistance = this.attackReach;
-    const x = this.player.x + this.facing.x * centerDistance;
-    const y = this.player.y + this.facing.y * centerDistance;
+    const x = this.player.x + this.facing.x * this.attackReach;
+    const y = this.player.y + this.facing.y * this.attackReach;
     const horizontal = Math.abs(this.facing.x) >= Math.abs(this.facing.y);
     const width = horizontal ? this.attackHitboxLength : this.attackHitboxWidth;
     const height = horizontal ? this.attackHitboxWidth : this.attackHitboxLength;
@@ -367,21 +349,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onAttackHitsEnemy(): void {
-    if (
-      !this.enemyAlive ||
-      this.attackPhase !== 'active' ||
-      this.lastEnemyHitAttackId === this.attackId
-    ) {
+    if (!this.enemyAlive || this.attackPhase !== 'active' || this.lastEnemyHitAttackId === this.attackId) {
       return;
     }
 
     this.lastEnemyHitAttackId = this.attackId;
     this.enemyHp = Math.max(0, this.enemyHp - 1);
 
-    const knockback = new Phaser.Math.Vector2(
-      this.enemy.x - this.player.x,
-      this.enemy.y - this.player.y
-    );
+    const knockback = new Phaser.Math.Vector2(this.enemy.x - this.player.x, this.enemy.y - this.player.y);
     if (knockback.lengthSq() < 0.001) {
       knockback.copy(this.facing);
     } else {
@@ -393,12 +368,10 @@ export class GameScene extends Phaser.Scene {
       knockback.y * this.enemyKnockbackSpeed
     );
 
-    this.enemy.setFillStyle(0xffffff);
-    this.enemy.setScale(1.12);
+    this.enemy.setFillStyle(0xffffff).setScale(1.12);
     this.time.delayedCall(70, () => {
       if (this.enemyAlive) {
-        this.enemy.setFillStyle(0xd95c5c);
-        this.enemy.setScale(1);
+        this.enemy.setFillStyle(0xd95c5c).setScale(1);
       }
     });
 
@@ -473,10 +446,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateEnemyHud(): void {
-    if (!this.enemyHpText || !this.enemy) {
-      return;
-    }
-
     this.enemyHpText.setPosition(this.enemy.x, this.enemy.y - 42);
     if (this.enemyAlive) {
       this.enemyHpText
