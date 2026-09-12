@@ -175,7 +175,7 @@ export class ChargerGameScene extends TunedGameScene {
         this.chargerDirection.y * this.chargerSpeed
       );
       if (this.time.now >= this.chargerPhaseEndsAt) {
-        this.beginRecovery();
+        this.beginChargerRecovery();
       }
       return;
     }
@@ -240,7 +240,7 @@ export class ChargerGameScene extends TunedGameScene {
     );
   }
 
-  private beginRecovery(): void {
+  private beginChargerRecovery(): void {
     this.chargerPhase = 'recovery';
     this.chargerPhaseEndsAt = this.time.now + this.chargerRecoveryMs;
     this.chargerBody.setVelocity(0, 0);
