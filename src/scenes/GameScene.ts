@@ -1,10 +1,15 @@
 import Phaser from 'phaser';
 
 type AttackPhase = 'idle' | 'startup' | 'active' | 'recovery';
+type EnemyAttackPhase = 'idle' | 'windup' | 'active' | 'recovery';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Rectangle;
   private playerBody!: Phaser.Physics.Arcade.Body;
+  private playerHpText!: Phaser.GameObjects.Text;
+  private playerHp = 5;
+  private playerDown = false;
+
   private enemy!: Phaser.GameObjects.Rectangle;
   private enemyBody!: Phaser.Physics.Arcade.Body;
   private enemyHpText!: Phaser.GameObjects.Text;
@@ -25,13 +30,25 @@ export class GameScene extends Phaser.Scene {
   private title!: Phaser.GameObjects.Text;
   private subtitle!: Phaser.GameObjects.Text;
   private facingIndicator!: Phaser.GameObjects.Line;
+
   private attackHitbox!: Phaser.GameObjects.Zone;
   private attackHitboxBody!: Phaser.Physics.Arcade.Body;
   private attackVisual!: Phaser.GameObjects.Rectangle;
   private attackPhase: AttackPhase = 'idle';
   private attackId = 0;
+
+  private enemyAttackHitbox!: Phaser.GameObjects.Zone;
+  private enemyAttackHitboxBody!: Phaser.Physics.Arcade.Body;
+  private enemyAttackVisual!: Phaser.GameObjects.Rectangle;
+  private enemyAttackPhase: EnemyAttackPhase = 'idle';
+  private enemyAttackDirection = new Phaser.Math.Vector2(0, 1);
+  private enemyAttackId = 0;
+  private lastPlayerHitEnemyAttackId = -1;
+  private nextEnemyAttackAt = 0;
+
   private joystickRadius = 54;
 
+  private readonly playerMaxHp = 5;
   private readonly playerMoveSpeed = 205;
   private readonly attackStartupMs = 90;
   private readonly attackActiveMs = 90;
@@ -39,8 +56,17 @@ export class GameScene extends Phaser.Scene {
   private readonly attackReach = 62;
   private readonly attackHitboxLength = 74;
   private readonly attackHitboxWidth = 58;
+
   private readonly enemyMaxHp = 3;
   private readonly enemyKnockbackSpeed = 255;
+  private readonly enemyAggroRange = 260;
+  private readonly enemyAttackWindupMs = 620;
+  private readonly enemyAttackActiveMs = 150;
+  private readonly enemyAttackRecoveryMs = 620;
+  private readonly enemyAttackCooldownMs = 520;
+  private readonly enemyAttackReach = 66;
+  private readonly enemyAttackLength = 96;
+  private readonly enemyAttackWidth = 76;
 
   constructor() {
     super('game');
@@ -56,13 +82,13 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(5);
 
-    this.title = this.add.text(18, 16, 'PJ001 · M1.2 Enemy', {
+    this.title = this.add.text(18, 16, 'PJ001 · M1.3 Combat', {
       fontSize: '18px',
       color: '#e9f5ef'
     }).setScrollFactor(0).setDepth(10);
 
-    this.subtitle = this.add.text(18, 42, 'Hit the red enemy · 3 hits to defeat', {
-      fontSize: '12px',
+    this.subtitle = this.add.text(18, 42, 'Enemy telegraphs before damage · contact alone is safe', {
+      fontSize: '11px',
       color: '#a9c9b8'
     }).setScrollFactor(0).setDepth(10);
 
@@ -72,6 +98,13 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.existing(this.player);
     this.playerBody = this.player.body as Phaser.Physics.Arcade.Body;
     this.playerBody.setCollideWorldBounds(true);
+
+    this.playerHpText = this.add.text(0, 16, 'PLAYER HP 5/5', {
+      fontSize: '12px',
+      color: '#dfffea',
+      backgroundColor: '#0c291baa',
+      padding: { x: 6, y: 3 }
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(10);
 
     this.enemy = this.add.rectangle(0, 0, 50, 50, 0xd95c5c)
       .setStrokeStyle(3, 0xffc4c4)
@@ -105,7 +138,24 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xfff0ad, 0)
       .setDepth(3);
 
+    this.enemyAttackHitbox = this.add.zone(0, 0, this.enemyAttackLength, this.enemyAttackWidth).setDepth(4);
+    this.physics.add.existing(this.enemyAttackHitbox);
+    this.enemyAttackHitboxBody = this.enemyAttackHitbox.body as Phaser.Physics.Arcade.Body;
+    this.enemyAttackHitboxBody.setAllowGravity(false);
+    this.enemyAttackHitboxBody.setImmovable(true);
+    this.enemyAttackHitboxBody.enable = false;
+
+    this.enemyAttackVisual = this.add.rectangle(
+      0,
+      0,
+      this.enemyAttackLength,
+      this.enemyAttackWidth,
+      0xffa43a,
+      0
+    ).setStrokeStyle(3, 0xffd27a, 0).setDepth(1);
+
     this.physics.add.overlap(this.attackHitbox, this.enemy, () => this.onAttackHitsEnemy());
+    this.physics.add.overlap(this.enemyAttackHitbox, this.player, () => this.onEnemyAttackHitsPlayer());
 
     this.cursors = this.input.keyboard?.createCursorKeys() ?? ({} as Phaser.Types.Input.Keyboard.CursorKeys);
 
@@ -159,6 +209,8 @@ export class GameScene extends Phaser.Scene {
     this.layout(this.scale.width, this.scale.height);
     this.updateFacingIndicator();
     this.updateEnemyHud();
+    this.updatePlayerHud();
+    this.nextEnemyAttackAt = this.time.now + 1200;
   }
 
   update(): void {
@@ -168,21 +220,45 @@ export class GameScene extends Phaser.Scene {
     );
 
     const movement = keyboardVector.lengthSq() > 0 ? keyboardVector.normalize() : this.moveVector;
-    if (movement.lengthSq() > 0.01) {
+    if (!this.playerDown && movement.lengthSq() > 0.01) {
       this.facing.copy(movement).normalize();
     }
 
-    this.playerBody.setVelocity(
-      movement.x * this.playerMoveSpeed,
-      movement.y * this.playerMoveSpeed
-    );
+    if (this.playerDown) {
+      this.playerBody.setVelocity(0, 0);
+    } else {
+      this.playerBody.setVelocity(
+        movement.x * this.playerMoveSpeed,
+        movement.y * this.playerMoveSpeed
+      );
+    }
+
     this.updateFacingIndicator();
 
     if (this.attackPhase === 'active') {
       this.positionAttackHitbox();
     }
+
     if (this.enemyAlive) {
       this.updateEnemyHud();
+    }
+
+    if (this.enemyAttackPhase !== 'idle') {
+      this.positionEnemyAttackArea();
+    }
+
+    if (
+      this.enemyAlive &&
+      !this.playerDown &&
+      this.enemyAttackPhase === 'idle' &&
+      this.time.now >= this.nextEnemyAttackAt
+    ) {
+      const distance = Phaser.Math.Distance.Between(this.enemy.x, this.enemy.y, this.player.x, this.player.y);
+      if (distance <= this.enemyAggroRange) {
+        this.beginEnemyWindup();
+      } else {
+        this.nextEnemyAttackAt = this.time.now + 280;
+      }
     }
   }
 
@@ -209,6 +285,7 @@ export class GameScene extends Phaser.Scene {
 
     this.title.setPosition(safeSide, 16);
     this.subtitle.setPosition(safeSide, 42);
+    this.playerHpText.setPosition(width - safeSide, 16);
 
     this.physics.world.setBounds(0, 0, width, height);
     this.playerBody.setCollideWorldBounds(true);
@@ -238,6 +315,9 @@ export class GameScene extends Phaser.Scene {
     this.updateEnemyHud();
     if (this.attackPhase === 'active') {
       this.positionAttackHitbox();
+    }
+    if (this.enemyAttackPhase !== 'idle') {
+      this.positionEnemyAttackArea();
     }
   }
 
@@ -285,7 +365,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryAttack(): void {
-    if (this.attackPhase !== 'idle') {
+    if (this.playerDown || this.attackPhase !== 'idle') {
       return;
     }
 
@@ -407,8 +487,148 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private beginEnemyWindup(): void {
+    if (!this.enemyAlive || this.playerDown || this.enemyAttackPhase !== 'idle') {
+      return;
+    }
+
+    const toPlayer = new Phaser.Math.Vector2(this.player.x - this.enemy.x, this.player.y - this.enemy.y);
+    if (Math.abs(toPlayer.x) >= Math.abs(toPlayer.y)) {
+      this.enemyAttackDirection.set(Math.sign(toPlayer.x) || 1, 0);
+    } else {
+      this.enemyAttackDirection.set(0, Math.sign(toPlayer.y) || 1);
+    }
+
+    this.enemyAttackId += 1;
+    this.enemyAttackPhase = 'windup';
+    this.positionEnemyAttackArea();
+    this.enemyAttackVisual
+      .setFillStyle(0xffa43a, 0.2)
+      .setStrokeStyle(3, 0xffd27a, 0.75);
+    this.enemy.setStrokeStyle(4, 0xffd27a, 1);
+
+    this.time.delayedCall(this.enemyAttackWindupMs, () => {
+      if (this.enemyAttackPhase === 'windup' && this.enemyAlive && !this.playerDown) {
+        this.beginEnemyActiveAttack();
+      }
+    });
+  }
+
+  private beginEnemyActiveAttack(): void {
+    this.enemyAttackPhase = 'active';
+    this.positionEnemyAttackArea();
+    this.enemyAttackHitboxBody.enable = true;
+    this.enemyAttackHitboxBody.updateFromGameObject();
+    this.enemyAttackVisual
+      .setFillStyle(0xff4b3e, 0.58)
+      .setStrokeStyle(3, 0xffc1a8, 0.95);
+    this.enemy.setStrokeStyle(4, 0xffffff, 1);
+    this.cameras.main.shake(55, 0.0024);
+
+    this.time.delayedCall(this.enemyAttackActiveMs, () => {
+      if (this.enemyAttackPhase === 'active') {
+        this.beginEnemyRecovery();
+      }
+    });
+  }
+
+  private beginEnemyRecovery(): void {
+    this.enemyAttackPhase = 'recovery';
+    this.enemyAttackHitboxBody.enable = false;
+    this.enemyAttackVisual
+      .setFillStyle(0xff4b3e, 0.08)
+      .setStrokeStyle(2, 0xffc1a8, 0.18);
+    if (this.enemyAlive) {
+      this.enemy.setStrokeStyle(3, 0xffc4c4, 1);
+    }
+
+    this.time.delayedCall(this.enemyAttackRecoveryMs, () => {
+      if (this.enemyAttackPhase !== 'recovery') {
+        return;
+      }
+      this.enemyAttackPhase = 'idle';
+      this.enemyAttackVisual
+        .setFillStyle(0xff4b3e, 0)
+        .setStrokeStyle(2, 0xffc1a8, 0);
+      this.nextEnemyAttackAt = this.time.now + this.enemyAttackCooldownMs;
+    });
+  }
+
+  private positionEnemyAttackArea(): void {
+    const x = this.enemy.x + this.enemyAttackDirection.x * this.enemyAttackReach;
+    const y = this.enemy.y + this.enemyAttackDirection.y * this.enemyAttackReach;
+    const horizontal = Math.abs(this.enemyAttackDirection.x) > 0;
+    const width = horizontal ? this.enemyAttackLength : this.enemyAttackWidth;
+    const height = horizontal ? this.enemyAttackWidth : this.enemyAttackLength;
+
+    this.enemyAttackHitbox.setPosition(x, y).setSize(width, height);
+    this.enemyAttackHitboxBody.setSize(width, height);
+    this.enemyAttackHitboxBody.updateFromGameObject();
+    this.enemyAttackVisual
+      .setPosition(x, y)
+      .setSize(width, height);
+  }
+
+  private onEnemyAttackHitsPlayer(): void {
+    if (
+      this.playerDown ||
+      this.enemyAttackPhase !== 'active' ||
+      this.lastPlayerHitEnemyAttackId === this.enemyAttackId
+    ) {
+      return;
+    }
+
+    this.lastPlayerHitEnemyAttackId = this.enemyAttackId;
+    this.playerHp = Math.max(0, this.playerHp - 1);
+    this.updatePlayerHud();
+
+    this.player.setFillStyle(0xffffff).setScale(1.1);
+    this.time.delayedCall(90, () => {
+      if (!this.playerDown) {
+        this.player.setFillStyle(0x68d391).setScale(1);
+      }
+    });
+
+    const damageText = this.add.text(this.player.x, this.player.y - 38, '-1 HP', {
+      fontSize: '20px',
+      color: '#ffb1aa',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(7);
+    this.tweens.add({
+      targets: damageText,
+      y: damageText.y - 30,
+      alpha: 0,
+      duration: 420,
+      ease: 'Quad.Out',
+      onComplete: () => damageText.destroy()
+    });
+
+    this.cameras.main.shake(100, 0.006);
+
+    if (this.playerHp <= 0) {
+      this.playerDown = true;
+      this.playerBody.setVelocity(0, 0);
+      this.player.setFillStyle(0x7d9186).setScale(1);
+      this.subtitle.setText('PLAYER DOWN · reload page to reset · death/respawn comes in M1.6');
+      this.cancelEnemyAttack();
+    }
+  }
+
+  private cancelEnemyAttack(): void {
+    this.enemyAttackPhase = 'idle';
+    this.enemyAttackHitboxBody.enable = false;
+    this.enemyAttackVisual
+      .setFillStyle(0xff4b3e, 0)
+      .setStrokeStyle(2, 0xffc1a8, 0);
+    if (this.enemyAlive) {
+      this.enemy.setStrokeStyle(3, 0xffc4c4, 1);
+    }
+    this.nextEnemyAttackAt = this.time.now + 1000;
+  }
+
   private defeatEnemy(): void {
     this.enemyAlive = false;
+    this.cancelEnemyAttack();
     this.enemyBody.enable = false;
     this.enemyHpText.setText('DEFEATED').setColor('#fff2a8');
 
@@ -438,10 +658,12 @@ export class GameScene extends Phaser.Scene {
       .setScale(1)
       .setAngle(0)
       .setFillStyle(0xd95c5c)
+      .setStrokeStyle(3, 0xffc4c4, 1)
       .setVisible(true);
     this.enemyBody.enable = true;
     this.enemyBody.setVelocity(0, 0);
     this.enemyBody.updateFromGameObject();
+    this.nextEnemyAttackAt = this.time.now + 950;
     this.updateEnemyHud();
   }
 
@@ -453,5 +675,11 @@ export class GameScene extends Phaser.Scene {
         .setColor('#ffd9d9')
         .setVisible(true);
     }
+  }
+
+  private updatePlayerHud(): void {
+    this.playerHpText
+      .setText(`PLAYER HP ${this.playerHp}/${this.playerMaxHp}`)
+      .setColor(this.playerHp <= 2 ? '#ffb1aa' : '#dfffea');
   }
 }
