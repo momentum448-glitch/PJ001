@@ -1,6 +1,6 @@
 # PJ001 Development Plan
 
-Version: 0.2  
+Version: 0.3  
 Status: Approved for M1 implementation  
 Source of truth: this repository
 
@@ -26,8 +26,10 @@ Implementation role: AI-led development, with the project owner making product/d
 - Primary target: Android
 - Development/testing strategy: web-first, then Android packaging later
 - Early play-test method: open a URL in Chrome on Android
-- Orientation: landscape
-- Controls: virtual joystick on the left; attack/skill controls on the right
+- Orientation: portrait 9:16
+- Prototype virtual resolution: 720 x 1280
+- Screen layout: gameplay in the upper area; touch controls concentrated in the lower area
+- Controls: virtual joystick on the lower left; attack/dodge/skill controls on the lower right
 - Basic attack: manual tap
 - Skills: larger skill pool later, limited equipped active skills; prototype target is 3 active skills
 - Progression: level/stat growth + equipment loot
@@ -51,17 +53,16 @@ Prototype content target:
 The prototype is not a content-complete game. Its job is to test combat feel and the minimum progression loop.
 
 ## 4. Current state
-Milestone 0 technical bootstrap is complete on `main`:
-- Phaser + TypeScript + Vite project
-- landscape game shell
-- placeholder player
-- touch joystick movement
-- keyboard movement for desktop debugging
-- basic ATTACK button feedback
-- mobile-first CSS shell
-- GitHub Actions build workflow
+M0 technical bootstrap is complete on `main`.
 
-M1 combat decisions have now been reviewed and locked. M1 implementation may begin only from the task breakdown in this plan.
+M0.5 browser playtest deployment is complete:
+- GitHub Pages deployment via GitHub Actions
+- stable playtest URL: `https://momentum448-glitch.github.io/PJ001/`
+- repository build and deploy workflows run from `main`
+
+Device testing of the first landscape build showed that the 16:9 canvas was too small when opened naturally on a phone held vertically. The project owner therefore changed the primary mobile orientation to portrait 9:16. This is now a locked product decision.
+
+The portrait shell uses a 720 x 1280 virtual canvas with the combat/play area above and touch controls below. M1 combat implementation should build on this portrait layout.
 
 ## 5. Working assumptions
 These are temporary until explicitly changed or validated.
@@ -78,6 +79,7 @@ These are temporary until explicitly changed or validated.
 - No stamina system initially
 - Equipment slots initially limited to weapon + armor unless testing proves more depth is needed
 - Placeholder/procedural/simple assets are acceptable until combat is validated
+- Portrait encounter composition should avoid relying on very wide horizontal sightlines
 
 ## 6. Development principles
 1. Validate feel before content volume.
@@ -89,6 +91,7 @@ These are temporary until explicitly changed or validated.
 7. Plan/document the next milestone before writing gameplay code for it.
 8. Use branches and pull requests for meaningful changes; `main` should remain the reviewed source of truth.
 9. Before important implementation work, re-read this plan and inspect the current GitHub state instead of relying on conversational memory alone.
+10. Keep the public playtest URL usable after meaningful merges so device feedback can happen continuously.
 
 ## 7. Milestones
 
@@ -99,14 +102,43 @@ Goal: establish a browser-playable mobile-first project skeleton.
 
 Acceptance criteria:
 - project builds
-- game renders in landscape
+- game renders
 - player placeholder is visible
 - touch joystick can drive movement
 - attack control responds to touch
 - source is on GitHub
 
+### M0.5 - Continuous browser playtest deployment
+Status: Complete
+
+Goal: make every stable `main` build testable from the Android phone through one URL.
+
+Acceptance criteria:
+- GitHub Pages deploys from GitHub Actions
+- Vite asset paths work under `/PJ001/`
+- build succeeds before deploy
+- project owner can open the playtest URL in Chrome on Android
+
+### M0.6 - Portrait mobile shell
+Status: In implementation
+
+Goal: make the game use the phone's natural portrait viewport instead of shrinking a landscape canvas.
+
+Locked decisions:
+- portrait 9:16
+- 720 x 1280 virtual resolution for the prototype
+- upper gameplay region and lower control region
+- joystick lower-left; action controls lower-right
+
+Acceptance criteria:
+- the canvas uses most of the available portrait viewport in Chrome
+- UI is readable without rotating the phone
+- joystick and attack button are reachable with two thumbs
+- player movement remains inside the gameplay region rather than disappearing beneath the control area
+- GitHub Pages build deploys successfully
+
 ### M1 - Combat sandbox
-Status: Ready for implementation
+Status: Ready for implementation after M0.6 device check
 
 Goal: determine whether basic movement, attack, dodge, and enemy interaction can feel responsive on a phone.
 
@@ -137,7 +169,7 @@ Planned scope:
 
 Acceptance criteria:
 - player can move, attack, dodge, take damage, kill an enemy, die, and respawn
-- controls are usable with two thumbs in landscape
+- controls are usable with two thumbs in portrait orientation
 - attacks have clearly readable startup/contact/recovery feedback
 - enemy attacks are readable before they deal damage
 - touching an enemy alone does not cause damage
@@ -192,7 +224,7 @@ Status: Planned
 Goal: assemble the mechanics into one 10-20 minute prototype session.
 
 Planned scope:
-- one small exploration/combat map
+- one small exploration/combat map designed for portrait framing
 - encounter flow
 - checkpoint placement
 - one boss
@@ -211,7 +243,7 @@ Goal: decide whether PJ001 should advance beyond prototype.
 
 Validation areas:
 - combat fun
-- touch ergonomics
+- portrait touch ergonomics
 - clarity/readability
 - pacing
 - progression motivation
@@ -267,7 +299,6 @@ After device testing:
 4. Only then plan the next milestone.
 
 ## 10. M1 implementation task breakdown
-M1 should be implemented in small slices. Do not attempt to build the full RPG layer during this milestone.
 
 ### M1.1 - Facing and attack state
 - Track player facing direction separately from instantaneous velocity.
@@ -333,7 +364,6 @@ Done when:
 - ready for Android phone play-test
 
 ## 11. M1 parameters that remain tunable, not design-blocking
-The following values should start as working parameters and be tuned by testing rather than debated in advance:
 - player move speed
 - attack startup/active/recovery durations
 - melee range/arc
@@ -351,14 +381,15 @@ These values are implementation parameters, not product decisions, until testing
 
 ## 12. Open issues and risks
 - The repository is currently Public. This is a project/account setting rather than a gameplay decision.
-- A stable public browser-play URL has not yet been configured.
-- Actual touch feel on the owner's Android phone has not yet been validated.
+- Portrait combat has less horizontal visibility than landscape; encounter composition and camera behavior must account for this.
+- Actual touch feel of the portrait shell still needs device validation.
+- Browser chrome reduces usable viewport height; layout should tolerate dynamic mobile viewport sizes.
 - Placeholder controls may need substantial tuning after device testing.
 - Arcade-heavy feedback must remain readable and performant on the target phone.
 - Soft aim assistance can become intrusive if its angle/range is too generous; it must remain a correction rather than auto-targeting.
 - Performance must eventually be verified on the target phone, not inferred from desktop/browser tests.
 
 ## 13. Definition of prototype success
-PJ001 prototype succeeds if, after a 10-20 minute mobile session, the combat is responsive, understandable, and enjoyable enough to justify producing more content.
+PJ001 prototype succeeds if, after a 10-20 minute mobile portrait session, the combat is responsive, understandable, and enjoyable enough to justify producing more content.
 
 Content quantity, polish, monetization potential, and visual fidelity are secondary until that condition is met.
