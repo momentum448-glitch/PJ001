@@ -1,7 +1,7 @@
 # PJ001 Development Plan
 
-Version: 0.3  
-Status: Approved for M1 implementation  
+Version: 0.4  
+Status: Approved for responsive portrait shell before M1  
 Source of truth: this repository
 
 ## 1. Problem and outcome
@@ -26,10 +26,11 @@ Implementation role: AI-led development, with the project owner making product/d
 - Primary target: Android
 - Development/testing strategy: web-first, then Android packaging later
 - Early play-test method: open a URL in Chrome on Android
-- Orientation: portrait 9:16
-- Prototype virtual resolution: 720 x 1280
-- Screen layout: gameplay in the upper area; touch controls concentrated in the lower area
-- Controls: virtual joystick on the lower left; attack/dodge/skill controls on the lower right
+- Orientation: portrait
+- Reference design space: 720 x 1280, not a fixed display aspect ratio
+- Screen behavior: responsive to the real mobile browser viewport and able to use taller phone ratios
+- Screen layout: gameplay fills the viewport; touch controls overlay the lower gameplay area rather than living in a separate hard panel
+- Controls: virtual joystick lower-left; attack/dodge/skill controls lower-right
 - Basic attack: manual tap
 - Skills: larger skill pool later, limited equipped active skills; prototype target is 3 active skills
 - Progression: level/stat growth + equipment loot
@@ -60,9 +61,11 @@ M0.5 browser playtest deployment is complete:
 - stable playtest URL: `https://momentum448-glitch.github.io/PJ001/`
 - repository build and deploy workflows run from `main`
 
-Device testing of the first landscape build showed that the 16:9 canvas was too small when opened naturally on a phone held vertically. The project owner therefore changed the primary mobile orientation to portrait 9:16. This is now a locked product decision.
+M0.6 portrait mobile shell is complete and has been device-tested. The portrait direction is accepted, but device feedback showed that a fixed 9:16 canvas leaves unused vertical space on taller phones and that a dedicated lower control panel feels visually separated from the game.
 
-The portrait shell uses a 720 x 1280 virtual canvas with the combat/play area above and touch controls below. M1 combat implementation should build on this portrait layout.
+The next shell refinement therefore keeps portrait but changes the display model: use the actual browser viewport, treat 720 x 1280 only as a reference design space, let the map continue behind the controls, and overlay lighter touch controls near the bottom safe area.
+
+M1 combat implementation should start only after this responsive shell is validated on the target phone.
 
 ## 5. Working assumptions
 These are temporary until explicitly changed or validated.
@@ -80,6 +83,7 @@ These are temporary until explicitly changed or validated.
 - Equipment slots initially limited to weapon + armor unless testing proves more depth is needed
 - Placeholder/procedural/simple assets are acceptable until combat is validated
 - Portrait encounter composition should avoid relying on very wide horizontal sightlines
+- Browser chrome and phone aspect ratios vary; gameplay/UI must tolerate dynamic viewport height changes
 
 ## 6. Development principles
 1. Validate feel before content volume.
@@ -120,25 +124,38 @@ Acceptance criteria:
 - project owner can open the playtest URL in Chrome on Android
 
 ### M0.6 - Portrait mobile shell
+Status: Complete
+
+Goal: verify that portrait is the preferred phone orientation.
+
+Result:
+- portrait direction accepted after device test
+- fixed 9:16 sizing and hard lower control panel rejected as the long-term shell
+
+### M0.7 - Responsive portrait shell
 Status: In implementation
 
-Goal: make the game use the phone's natural portrait viewport instead of shrinking a landscape canvas.
+Goal: make the playtest feel native to tall Android screens before combat work begins.
 
 Locked decisions:
-- portrait 9:16
-- 720 x 1280 virtual resolution for the prototype
-- upper gameplay region and lower control region
-- joystick lower-left; action controls lower-right
+- portrait remains the primary orientation
+- 720 x 1280 is a reference design space only
+- runtime display follows the actual available browser viewport
+- gameplay continues behind the lower controls
+- joystick and action controls are smaller, lighter overlays
+- lower safe-area spacing must keep controls clear of Android/browser navigation UI
 
 Acceptance criteria:
-- the canvas uses most of the available portrait viewport in Chrome
-- UI is readable without rotating the phone
-- joystick and attack button are reachable with two thumbs
-- player movement remains inside the gameplay region rather than disappearing beneath the control area
+- no large unused letterbox area caused by forcing 9:16 on a taller phone
+- map visually fills the playable webpage viewport
+- joystick and ATTACK remain comfortably reachable with two thumbs
+- controls do not read as a separate remote-control panel
+- player can move across the full visible gameplay space without disappearing under browser UI
+- viewport resize/orientation changes do not break control positions or physics bounds
 - GitHub Pages build deploys successfully
 
 ### M1 - Combat sandbox
-Status: Ready for implementation after M0.6 device check
+Status: Ready for implementation after M0.7 device check
 
 Goal: determine whether basic movement, attack, dodge, and enemy interaction can feel responsive on a phone.
 
@@ -382,8 +399,8 @@ These values are implementation parameters, not product decisions, until testing
 ## 12. Open issues and risks
 - The repository is currently Public. This is a project/account setting rather than a gameplay decision.
 - Portrait combat has less horizontal visibility than landscape; encounter composition and camera behavior must account for this.
-- Actual touch feel of the portrait shell still needs device validation.
-- Browser chrome reduces usable viewport height; layout should tolerate dynamic mobile viewport sizes.
+- Browser viewport dimensions and chrome can change while playing; resize handling must keep UI and physics coherent.
+- Touch-control overlay must remain readable when combat effects and enemies occupy the lower screen.
 - Placeholder controls may need substantial tuning after device testing.
 - Arcade-heavy feedback must remain readable and performant on the target phone.
 - Soft aim assistance can become intrusive if its angle/range is too generous; it must remain a correction rather than auto-targeting.
