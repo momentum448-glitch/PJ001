@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import './style.css';
-import { TunedGameScene } from './tuning/TunedGameScene';
+import { ChargerGameScene } from './tuning/ChargerGameScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -19,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false
     }
   },
-  scene: [TunedGameScene]
+  scene: [ChargerGameScene]
 };
 
 new Phaser.Game(config);
