@@ -1,7 +1,7 @@
 # PJ001 Development Plan
 
-Version: 0.9  
-Status: M1 complete — M2 decision gate active  
+Version: 1.0  
+Status: M2 combat depth in implementation — M2.1 active  
 Source of truth: this repository
 
 ## 1. Problem and outcome
@@ -76,13 +76,25 @@ Accepted M1 tuning baseline:
 Stable playtest URL:
 `https://momentum448-glitch.github.io/PJ001/`
 
-Current product gate:
-**M2 — combat depth decisions before implementation.**
+Current implementation target:
+**M2.1 — ranged enemy + first two-enemy encounter.**
 
 M2 validation question:
 > Does adding distinct enemy roles and a small skill loadout create meaningful combat choices without making portrait touch controls cluttered or reducing readability?
 
-## 5. Working assumptions
+M2.1 validation question:
+> Can the player read and evade one melee telegraph plus one ranged projectile threat at the same time without the portrait screen becoming visually noisy or unfair?
+
+## 5. Locked M2 foundational decisions
+1. Enemy archetypes #2 and #3: **Ranged shooter + Charger**.
+2. Three active prototype skills: **Cleave + Projectile + Guard/Parry**.
+3. Skill resource model: **cooldown-only**; no mana/energy layer in the prototype.
+4. Skill aiming/input: **tap skill -> cast from facing with soft aim**; no drag aim or hard auto-target.
+5. First multi-enemy encounter: **1 melee + 1 ranged**.
+
+Assistant may choose initial HP, damage, projectile speed, cooldowns, telegraph timings, placeholder visuals, and implementation architecture, then tune from device feedback.
+
+## 6. Working assumptions
 - Single-player, offline-first, melee-first combat
 - No multiplayer/backend/account/monetization during prototype
 - No crafting, elemental system, stamina, or complex combo tree initially
@@ -90,10 +102,11 @@ M2 validation question:
 - Placeholder visuals are acceptable until combat is validated
 - Portrait encounter composition should avoid very wide horizontal sightlines
 - Browser viewport resize must remain safe
-- M1 tuning is now the baseline; future changes require a specific M2 reason or device feedback
+- M1 tuning is the baseline; future changes require a specific M2 reason or device feedback
 - M2 should add depth through role interaction, not raw content volume
+- Ranged projectiles use explicit readable wind-up and do not deal passive contact damage before being fired
 
-## 6. Development principles
+## 7. Development principles
 1. Validate feel before content volume.
 2. Build the smallest playable experiment for each uncertain mechanic.
 3. Avoid systems that do not affect the current validation question.
@@ -105,7 +118,7 @@ M2 validation question:
 9. Before important work, re-read PLAN and inspect current GitHub state rather than relying on chat memory.
 10. Keep the public playtest URL usable after meaningful merges.
 
-## 7. Milestones
+## 8. Milestones
 ### M0 — Technical bootstrap
 Status: Complete
 
@@ -132,16 +145,15 @@ Validated baseline:
 - clean reset after death/respawn
 
 ### M2 — Combat depth
-Status: Decision gate
+Status: In progress
 
-Planned scope after decisions are locked:
-- 3 enemy archetypes total
-- 3 active prototype skills
-- skill cooldowns
-- clearer role-specific telegraphs
-- small multi-enemy encounter composition
-
-No M2 gameplay implementation should start until the foundational enemy/skill/control decisions below are locked.
+Scope:
+- 3 enemy archetypes total: melee, ranged, charger
+- 3 active prototype skills: Cleave, Projectile, Guard/Parry
+- cooldown-only skill model
+- facing + soft-aim skill casting
+- role-specific telegraphs
+- multi-enemy encounter composition
 
 ### M3 — Reward and progression loop
 Status: Planned
@@ -158,10 +170,10 @@ Status: Planned
 
 Output: go / revise / stop based on combat fun, ergonomics, readability, pacing, progression motivation, and phone performance.
 
-## 8. Explicitly out of scope until prototype validation
+## 9. Explicitly out of scope until prototype validation
 Story campaign, large world, multiplayer, online services, accounts/cloud saves, monetization, extensive crafting, large item/skill databases, production art pipeline, localization, Play Store release work, and early APK packaging.
 
-## 9. Workflow for every milestone
+## 10. Workflow for every milestone
 Before implementation: re-read plan/repo, define validation question, identify material decisions, record assumptions/acceptance criteria, and choose the smallest testable slice.
 
 During implementation: create milestone branch, keep commits focused, run build/CI, avoid unrelated refactors.
@@ -170,47 +182,64 @@ Before merge: verify machine-testable criteria, record device-test items, review
 
 After device testing: record findings, tune/lock decisions, update plan, then continue.
 
-## 10. M1 implementation breakdown
-### M1.1 — Facing and attack state
-Status: Complete
+## 11. M2 implementation breakdown
+### M2.1 — Ranged enemy and first mixed encounter
+Status: In implementation
 
-### M1.2 — First enemy and damage model
-Status: Complete, device-tuned
+Scope:
+- add one ranged enemy alongside the existing melee enemy
+- ranged enemy has readable pre-fire telegraph
+- fired projectile travels through the arena and damages player only on explicit projectile hit
+- dodge i-frames work against projectile hits
+- melee attack can damage/kill the ranged enemy
+- soft aim chooses a valid nearby enemy without persistent lock-on
+- death/respawn resets both enemies and all ranged projectile state
 
-### M1.3 — Enemy telegraph and player damage
-Status: Complete, device-tested OK
+Initial tunable values:
+- ranged HP: 2
+- pre-fire wind-up: ~700 ms
+- projectile speed: ~220 px/s
+- ranged attack cooldown: ~1400 ms
+- preferred spawn: upper-right while melee remains upper-center/left
 
-### M1.4 — Dodge dash
-Status: Complete, device-tested and tuned
+Done when:
+- player can distinguish melee telegraph from ranged pre-fire telegraph
+- projectile is readable on a phone and can be dodged intentionally
+- projectile cannot cause repeated/stale damage after death/respawn
+- both enemies can be killed with the current basic attack
+- encounter remains understandable in portrait orientation
 
-### M1.5 — Soft aim assistance
-Status: Complete, device-tested OK
+### M2.2 — Charger enemy
+Status: Planned
 
-### M1.6 — Death, respawn, HUD, sandbox pass
-Status: Complete, device-accepted
+Add a third archetype with clear charge wind-up, committed movement line, active damage window, and recovery.
 
-Implemented:
-- automatic fixed-checkpoint respawn
-- full HP restore
-- clean reset of attack, dodge, input, enemy attack/hitbox, and transient combat state
-- enemy reset to predictable fresh-fight state
-- readable death/respawn HUD
+### M2.3 — Cleave skill
+Status: Planned
 
-## 11. M2 decision gate
-The following must be locked before M2 gameplay code begins:
-1. Enemy archetype roles for enemies #2 and #3.
-2. Prototype skill identities for the 3 active skills.
-3. Skill resource model: cooldown-only vs another resource layer.
-4. Skill aiming/input model on portrait touch controls.
-5. First multi-enemy encounter composition target.
+Wide frontal melee skill, cooldown-only, facing + soft aim, tuned for multi-target pressure.
 
-Assistant can choose initial numeric tuning, cooldown durations, HP values, exact telegraph milliseconds, placeholder visuals, and implementation architecture after those five decisions are locked.
+### M2.4 — Projectile skill
+Status: Planned
+
+Player ranged skill with cooldown-only cast, facing + soft aim, readable projectile and hit feedback.
+
+### M2.5 — Guard/Parry skill
+Status: Planned
+
+Short defensive timing tool; exact guard/parry reward timing will be tested without adding mana/energy.
+
+### M2.6 — Three-skill control layout and encounter pass
+Status: Planned
+
+Fit ATTACK + DODGE + 3 active skills in portrait, then validate mixed melee/ranged/charger encounter readability and 3-minute stability.
 
 ## 12. Open risks
 - portrait has less horizontal visibility than landscape
 - future skill buttons can crowd ATTACK/DODGE
 - multiple enemies can reduce telegraph readability quickly
 - soft aim must remain predictable when more than one target exists
+- ranged projectiles can become visual clutter or off-screen unfairness
 - skill aiming can conflict with movement if input design is too complex
 - final performance must be verified on target phone
 - repository is currently Public
