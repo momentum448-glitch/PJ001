@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ChargerGameScene } from './ChargerGameScene';
+import { ChargerMovementFixedScene } from './ChargerMovementFixedScene';
 
 type CombatSceneInternals = Record<string, any>;
 type CleavePhase = 'idle' | 'startup' | 'recovery';
@@ -8,7 +8,7 @@ type CleavePhase = 'idle' | 'startup' | 'recovery';
  * M2.3 adds the first active player skill without redesigning the future
  * three-skill layout. Cleave is a cooldown-only frontal multi-target tool.
  */
-export class CleaveGameScene extends ChargerGameScene {
+export class CleaveGameScene extends ChargerMovementFixedScene {
   private readonly cleaveCooldownMs = 2800;
   private readonly cleaveStartupMs = 120;
   private readonly cleaveRecoveryMs = 260;
@@ -346,9 +346,7 @@ export class CleaveGameScene extends ChargerGameScene {
     }
 
     const width = this.scale.width;
-    const height = this.scale.height;
     const safeSide = Phaser.Math.Clamp(width * 0.035, 14, 26);
-    const safeBottom = Phaser.Math.Clamp(height * 0.052, 36, 62);
     const radius = Phaser.Math.Clamp(width * 0.052, 32, 38);
 
     const x = width - safeSide - radius - 14;
@@ -356,9 +354,5 @@ export class CleaveGameScene extends ChargerGameScene {
 
     this.cleaveButton.setPosition(x, y).setRadius(radius);
     this.cleaveLabel.setPosition(x, y);
-
-    // Keep the first skill above the existing action cluster; the full
-    // ATTACK + DODGE + 3-skill ergonomic layout remains an M2.6 task.
-    void safeBottom;
   }
 }
