@@ -1,7 +1,7 @@
 # PJ001 Development Plan
 
-Version: 1.1  
-Status: M2 combat depth in implementation — M2.2 active  
+Version: 1.2  
+Status: M2 combat depth in implementation — M2.3 active  
 Source of truth: this repository
 
 ## 1. Product goal
@@ -65,15 +65,16 @@ Completed:
 - M0.7 responsive portrait shell
 - M1.1–M1.6 combat sandbox
 - M2.1 ranged enemy + first mixed encounter, device-accepted
+- M2.2 charger enemy, device-accepted after charger movement hotfix
 
 Current implementation target:
-**M2.2 — Charger enemy.**
+**M2.3 — Cleave skill.**
 
 M2 validation question:
 > Do distinct enemy roles plus a small skill loadout create meaningful combat choices without making portrait touch controls cluttered or reducing readability?
 
-M2.2 validation question:
-> Can a committed charger attack remain readable and fair while melee and ranged threats already exist on screen?
+M2.3 validation question:
+> Does one wide frontal cooldown skill create a useful multi-target choice without making basic attack feel obsolete or cluttering portrait controls?
 
 ## 7. Development principles
 1. Validate feel before content volume.
@@ -124,50 +125,45 @@ Go / revise / stop decision based on combat fun, ergonomics, readability, pacing
 ### M2.1 — Ranged enemy and first mixed encounter
 Status: Complete, device-accepted
 
-Implemented:
-- 1 melee + 1 ranged encounter
-- ~700 ms ranged pre-fire telegraph
-- ~220 px/s projectile
-- projectile respects dodge i-frames
-- basic attack damages/kills ranged enemy
-- soft aim considers multiple valid targets
-- respawn clears projectiles and resets both enemies
-
 ### M2.2 — Charger enemy
+Status: Complete, device-accepted after hotfix
+
+Accepted behavior:
+- ~650 ms wind-up
+- committed non-homing charge
+- charge-only damage; passive contact remains safe
+- dodge i-frames avoid charge damage
+- basic attack damages/kills charger
+- respawn resets charger state cleanly
+
+### M2.3 — Cleave skill
 Status: In implementation
 
 Scope:
-- add third archetype: charger
-- charger uses a clear wind-up before movement
-- charge direction is committed when the attack begins; no homing during the dash
-- damage is active only during the charge, not from passive body contact
-- dodge i-frames avoid charge damage
-- basic attack can damage/kill charger
-- soft aim can consider charger together with melee/ranged
-- death/respawn resets charger attack state cleanly
+- add one dedicated CLEAVE touch button without redesigning the full future 3-skill layout
+- cooldown-only; no mana/energy
+- tap casts from current facing with the same soft-aim correction used by basic attack
+- wide frontal hit area can damage multiple living enemies in one cast
+- skill is state-gated against attack/dodge/death and cannot overlap itself
+- clear startup/impact/recovery feedback
+- respawn clears transient Cleave state and restores the skill to a safe usable state
 
 Initial tunable values:
-- charger HP: 3
-- wind-up: ~650 ms
-- charge speed: ~360 px/s
-- charge active duration: ~420 ms
-- recovery: ~650 ms
-- cooldown before next wind-up: ~900 ms
-- preferred spawn: upper-left, visually separated from ranged upper-right
+- cooldown: ~2.8 s
+- startup: ~120 ms
+- recovery: ~260 ms
+- range: ~130 px
+- frontal arc: ~110 degrees
+- damage: 1 per enemy per cast
 
 Done when:
-- player can tell the charger telegraph apart from melee and ranged telegraphs
-- charger locks its direction before movement and does not steer toward the player mid-charge
-- touching an idle/recovering charger causes no damage
-- charge can be intentionally dodged with movement or i-frames
-- only one damage event can occur per charge
-- death/respawn leaves no stale charger damage state
-- three archetypes remain understandable in portrait orientation
-
-### M2.3 — Cleave skill
-Status: Planned
-
-Wide frontal melee skill, cooldown-only, facing + soft aim, tuned for multi-target pressure.
+- Cleave can hit two or more enemies when they are grouped in front of the player
+- targets behind the player or clearly outside the frontal arc are not hit
+- one enemy cannot be damaged twice by a single Cleave cast
+- skill cannot be activated during dodge, death, or another attack/skill state
+- cooldown is readable on the button
+- basic attack still has a faster single-target role
+- control placement remains usable in portrait
 
 ### M2.4 — Projectile skill
 Status: Planned
@@ -192,6 +188,7 @@ Fit ATTACK + DODGE + 3 active skills in portrait and validate mixed melee/ranged
 - M1 tuning remains baseline unless M2 feedback gives a specific reason to change it
 - Multiple simultaneous telegraphs can become visually noisy
 - Future skill buttons can crowd ATTACK/DODGE
+- Cleave must not become a strictly better basic attack; cooldown and width should create a situational multi-target role
 - final performance must be verified on target phone
 - repository is currently Public
 
